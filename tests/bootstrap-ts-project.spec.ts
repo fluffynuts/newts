@@ -1,6 +1,8 @@
 import * as spawnModule from "../src/spawn";
+
 jest.doMock("../src/spawn", () => spawnModule);
 import "expect-even-more-jest";
+import "./matchers";
 import { bootstrapTsProject, NpmPackage, sanitizeOptions } from "../src/bootstrap-ts-project";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
@@ -31,14 +33,14 @@ describe(`bootstrap-ts-project`, () => {
         describe(`when where not set`, () => {
             it(`should set project path from name`, async () => {
                 // Arrange
-                const options = {name: faker.random.alphaNumeric()};
+                const options = { name: faker.random.alphaNumeric() };
                 // Act
                 const result = sanitizeOptions(options);
                 // Assert
                 expect(result)
                     .toEqual(
                         expect.objectContaining(
-                            {name: options.name, where: options.name}
+                            { name: options.name, where: options.name }
                         ));
             });
         });
@@ -52,7 +54,7 @@ describe(`bootstrap-ts-project`, () => {
                 sandbox = await Sandbox.create(),
                 where = sandbox.fullPathFor("projects");
             // Act
-            await bootstrapTsProject({name, where});
+            await bootstrapTsProject({ name, where });
             // Assert
             expect(path.join(where, name))
                 .toBeFolder();
@@ -64,6 +66,7 @@ describe(`bootstrap-ts-project`, () => {
             // running `git init` twice is safe, so no need to protect against it
             it(`should initialize git`, async () => {
                 // Arrange
+                fakeGit = false;
                 const
                     name = faker.random.alphaNumeric(5),
                     sandbox = await Sandbox.create(),
@@ -81,9 +84,10 @@ describe(`bootstrap-ts-project`, () => {
                     .toBeFolder();
             });
         });
-        describe('when initializeGit is false', function () {
+        describe("when initializeGit is false", function() {
             it(`should not initialize git`, async () => {
                 // Arrange
+                fakeGit = false;
                 const
                     name = faker.random.alphaNumeric(5),
                     sandbox = await Sandbox.create(),
@@ -155,7 +159,7 @@ describe(`bootstrap-ts-project`, () => {
                             url: "foo.bar.com/whatever"
                         },
                         keywords: faker.random.words().split(" "),
-                        author: `${faker.name.firstName()} ${faker.name.lastName()}`,
+                        author: `${ faker.name.firstName() } ${ faker.name.lastName() }`,
                         license: faker.random.alphaNumeric(),
                         devDependencies: {
                             foo: "^1.2.3"
@@ -180,42 +184,207 @@ describe(`bootstrap-ts-project`, () => {
             });
         });
 
-        describe('installing required packages', function () {
-            describe('when includeLinter is true', function () {
-                it(`should install tslint`, async () => {
-                    // this test is the only one which should to a real install
-                    // -> give it some time
-                    jest.setTimeout(20000);
+        describe("installing required packages", function() {
+            describe(`assuming npm runs...`, () => {
+                it(`should install tslint by default`, async () => {
                     // Arrange
-                    const spy = spyOn(spawnModule, "spawn").and.callThrough();
 
                     const
                         name = faker.random.alphaNumeric(5),
                         sandbox = await Sandbox.create(),
-                        where = sandbox.path,
-                        packageJson = path.join(name, "package.json");
+                        where = sandbox.path;
                     // Act
                     await bootstrapTsProject({
                         name, where
                     })
                     // Assert
-                    expect(spawnModule.spawn)
-                        .toHaveBeenCalled();
-                    const devInstall = spy.calls.all().find(ci => ci.args[1].indexOf("--save-dev") > -1);
-                    if (devInstall === undefined) {
-                        throw new Error(`No dev install cmd found`);
-                    }
-                    expect(devInstall.args[0])
-                        .toEqual("npm");
-                    expect(devInstall.args[1])
-                        .toContain("--no-progress");
-                    expect(devInstall.args[1])
-                        .toContain("tslint");
-                    const pkg = await readPkg(sandbox, packageJson);
-                    expect(pkg.devDependencies.tslint)
-                        .toExist();
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("tslint");
                 });
+
+                it(`should install typescript`, async () => {
+                    // Arrange
+                    const
+                        name = faker.random.alphaNumeric(5),
+                        sandbox = await Sandbox.create(),
+                        where = sandbox.path;
+                    // Act
+                    await bootstrapTsProject({
+                        name,
+                        where
+                    });
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("typescript");
+                });
+
+                it(`should skip tslint on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name,
+                        where,
+                        includeLinter: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("tslint");
+                });
+
+                // node types
+                it(`should install @types/node by default`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("@types/node");
+                });
+
+                it(`should skip @types/node on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where, includeNodeTypes: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("@types/node");
+                });
+                // faker
+                it(`should install faker and @types/faker by default`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("faker");
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("@types/faker");
+                });
+                it(`should skip faker on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where, includeFaker: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("faker");
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("@types/faker");
+                });
+                // jest
+                it(`should install jest by default`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("jest");
+                });
+                it(`should skip jest on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where, includeJest: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("jest");
+                });
+                // expect even more jest
+                it(`should install expect-even-more-jest by default`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("expect-even-more-jest");
+                });
+                it(`should skip expect-even-more-jest on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where, includeExpectEvenMoreJest: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("expect-even-more-jest");
+                });
+                // zarro
+                it(`should install zarro by default`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("zarro");
+                });
+                it(`should skip zarro on request`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await bootstrapTsProject({
+                        name, where, includeZarro: false
+                    })
+                    // Assert
+                    expect(spawnModule)
+                        .not.toHaveInstalledDevDependency("zarro");
+                });
+
+                async function init() {
+                    const sandbox = await Sandbox.create();
+                    return {
+                        name: faker.random.alphaNumeric(5),
+                        sandbox,
+                        where: sandbox.path
+                    }
+                }
             });
+        });
+    });
+
+    let fakeGit = true;
+
+    beforeEach(() => {
+        fakeGit = true;
+        const original = spawnModule.spawn;
+        spyOn(spawnModule, "spawn").and.callFake((cmd, args, opts) => {
+            const
+                basename = path.basename(cmd),
+                extname = path.extname(basename),
+                command = basename.substr(0, basename.length - extname.length).toLowerCase();
+            if (command === "npm" &&
+                args[0] === "install") {
+                // suppress
+                return;
+            }
+            if (fakeGit && command === "git") {
+                // suppress
+                return;
+            }
+            return original.call(null, cmd, args, opts);
         });
     });
 
@@ -228,4 +397,8 @@ describe(`bootstrap-ts-project`, () => {
     afterEach(async () => {
         await Sandbox.destroyAll();
     });
+    beforeAll(async () => {
+        await Sandbox.destroyAny();
+    });
 });
+

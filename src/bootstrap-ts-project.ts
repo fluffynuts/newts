@@ -5,6 +5,8 @@ import { spawn } from "./spawn";
 
 validateNodeVersionAtLeast(10, 12);
 
+let npmPath: string;
+
 export interface BootstrapOptions {
     name: string;
     where?: string;
@@ -38,10 +40,7 @@ interface InternalBootstrapOptions extends BootstrapOptions {
 }
 
 export async function bootstrapTsProject(options: BootstrapOptions) {
-    const npm = await which("npm");
-    if (!npm) {
-        throw new Error("no npm in path?");
-    }
+    await checkNpm();
     const sanitizedOptions = sanitizeOptions(options);
     await createFolderIfNotExists(sanitizedOptions);
     await runInFolder(sanitizedOptions.fullPath, async () => {
@@ -59,7 +58,16 @@ export async function bootstrapTsProject(options: BootstrapOptions) {
     });
 }
 
+async function checkNpm() {
+    const npm = await which("npm");
+    if (!npm) {
+        throw new Error("no npm in path?");
+    }
+    npmPath = npm;
+}
+
 type AsyncAction = (() => Promise<void>);
+type Func<Tin, TOut> = ((arg: Tin) => TOut);
 
 export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOptions {
     if (!options) {
@@ -68,7 +76,7 @@ export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOpt
     if (!options.name) {
         throw new Error("No project name provided");
     }
-    const result = {...defaultOptions, ...options} as InternalBootstrapOptions;
+    const result = { ...defaultOptions, ...options } as InternalBootstrapOptions;
     if (!result.where) {
         result.where = result.name
         result.fullPath = path.resolve(path.join(process.cwd(), result.where));
@@ -90,13 +98,13 @@ async function initGit(options: InternalBootstrapOptions) {
     const git = await which("git");
     if (!git) {
         throw new Error(
-            `Cannot initialize git in ${options.fullPath}`
+            `Cannot initialize git in ${ options.fullPath }`
         );
     }
     try {
         await spawn(git, ["init"]);
     } catch (e) {
-        throw new Error(`git init fails: ${e}`);
+        throw new Error(`git init fails: ${ e }`);
     }
 
     await setupGitIgnore();
@@ -106,7 +114,7 @@ async function setupGitIgnore() {
 }
 
 async function createFolderIfNotExists(options: InternalBootstrapOptions) {
-    await fs.mkdir(options.fullPath, {recursive: true});
+    await fs.mkdir(options.fullPath, { recursive: true });
 }
 
 async function runInFolder(
@@ -144,19 +152,41 @@ async function initPackage(): Promise<boolean> {
     if (alreadyExists) {
         return !alreadyExists;
     }
-    await spawn("npm", ["init", "-y"]);
+    await runNpm(["init", "-y"]);
     return true;
 }
 
+function runNpm(args: string[]) {
+    return spawn(npmPath, args);
+}
+
+const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
+    tslint: o => !!o.includeLinter,
+    typescript: () => true,
+    "@types/node": o => !!o.includeNodeTypes,
+    faker: o => !!o.includeFaker,
+    "@types/faker": o => !!o.includeFaker,
+    jest: o => !!o.includeJest,
+    "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
+    zarro: o => !!o.includeZarro
+};
 
 async function installPackages(options: InternalBootstrapOptions) {
-    const devDeps = [];
-    if (options.includeLinter) {
-        devDeps.push("tslint");
-    }
+    const devDeps = Object.keys(packageMap)
+        .map(k => {
+            return {
+                name: k,
+                install: packageMap[k](options)
+            }
+        })
+        .filter(o => o.install)
+        .map(o => o.name);
 
+    if (devDeps.length === 0) {
+        return;
+    }
     const args = ["install", "--save-dev", "--no-progress"].concat(devDeps);
-    await spawn("npm", args);
+    await runNpm(args);
 }
 
 async function generateTsConfig() {
@@ -204,16 +234,26 @@ async function fileExists(at: string): Promise<boolean> {
     }
 }
 
+async function sleep(ms: number): Promise<void> {
+    return new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
+}
+
 async function readTextFile(at: string): Promise<string> {
-    try {
-        return await fs.readFile(at, {encoding: "utf8"});
-    } catch (e) {
-        throw new Error(`can't read file at ${path.resolve(at)}`);
+    const fullpath = path.resolve(at);
+    for (let i = 0; i < 5; i++) {
+        try {
+            return await fs.readFile(fullpath, { encoding: "utf8" });
+        } catch (e) {
+            await sleep(100);
+        }
     }
+    throw new Error(`can't read file at ${ fullpath }`);
 }
 
 function writeTextFile(at: string, contents: string): Promise<void> {
-    return fs.writeFile(at, contents, {encoding: "utf8"});
+    return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 
 async function readPackageJson(): Promise<NpmPackage> {
