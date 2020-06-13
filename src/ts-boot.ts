@@ -39,7 +39,7 @@ interface InternalBootstrapOptions extends BootstrapOptions {
     fullPath: string;
 }
 
-export async function bootstrapTsProject(options: BootstrapOptions) {
+export async function tsBoot(options: BootstrapOptions) {
     await checkNpm();
     const sanitizedOptions = sanitizeOptions(options);
     await createFolderIfNotExists(sanitizedOptions);

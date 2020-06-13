@@ -3,7 +3,7 @@ import * as spawnModule from "../src/spawn";
 jest.doMock("../src/spawn", () => spawnModule);
 import "expect-even-more-jest";
 import "./matchers";
-import { bootstrapTsProject, NpmPackage, sanitizeOptions } from "../src/bootstrap-ts-project";
+import { tsBoot, NpmPackage, sanitizeOptions } from "../src/ts-boot";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
@@ -15,7 +15,7 @@ describe(`bootstrap-ts-project`, () => {
                 // Arrange
                 // Act
                 // @ts-ignore
-                await expect(bootstrapTsProject())
+                await expect(tsBoot())
                     .rejects.toThrow("No options provided");
                 // Assert
             });
@@ -25,7 +25,7 @@ describe(`bootstrap-ts-project`, () => {
                 // Arrange
                 // Act
                 // @ts-ignore
-                await expect(bootstrapTsProject({}))
+                await expect(tsBoot({}))
                     .rejects.toThrow("No project name provided");
                 // Assert
             });
@@ -54,7 +54,7 @@ describe(`bootstrap-ts-project`, () => {
                 sandbox = await Sandbox.create(),
                 where = sandbox.fullPathFor("projects");
             // Act
-            await bootstrapTsProject({ name, where });
+            await tsBoot({ name, where });
             // Assert
             expect(path.join(where, name))
                 .toBeFolder();
@@ -74,7 +74,7 @@ describe(`bootstrap-ts-project`, () => {
                     projectDir = sandbox.fullPathFor(name),
                     gitDir = path.join(projectDir, ".git");
                 // Act
-                await bootstrapTsProject(
+                await tsBoot(
                     {
                         name,
                         where
@@ -82,6 +82,15 @@ describe(`bootstrap-ts-project`, () => {
                 // Assert
                 expect(gitDir)
                     .toBeFolder();
+            });
+
+            it(`should generate the .gitignore file`, async () => {
+                // Arrange
+                const
+                    { name, where, sandbox } = await init();
+                // Act
+                await tsBoot({ where, name });
+                // Assert
             });
         });
         describe("when initializeGit is false", function() {
@@ -95,7 +104,7 @@ describe(`bootstrap-ts-project`, () => {
                     projectDir = sandbox.fullPathFor(name),
                     gitDir = path.join(projectDir, ".git");
                 // Act
-                await bootstrapTsProject(
+                await tsBoot(
                     {
                         name,
                         where,
@@ -119,7 +128,7 @@ describe(`bootstrap-ts-project`, () => {
                 expect(packageJsonFullPath)
                     .not.toBeFile();
                 // Act
-                await bootstrapTsProject({
+                await tsBoot({
                     name,
                     where
                 });
@@ -173,7 +182,7 @@ describe(`bootstrap-ts-project`, () => {
                     JSON.stringify(pkg)
                 );
                 // Act
-                await bootstrapTsProject({
+                await tsBoot({
                     name,
                     where
                 });
@@ -194,7 +203,7 @@ describe(`bootstrap-ts-project`, () => {
                         sandbox = await Sandbox.create(),
                         where = sandbox.path;
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -209,7 +218,7 @@ describe(`bootstrap-ts-project`, () => {
                         sandbox = await Sandbox.create(),
                         where = sandbox.path;
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name,
                         where
                     });
@@ -222,7 +231,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name,
                         where,
                         includeLinter: false
@@ -237,7 +246,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -249,7 +258,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where, includeNodeTypes: false
                     })
                     // Assert
@@ -261,7 +270,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -274,7 +283,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where, includeFaker: false
                     })
                     // Assert
@@ -288,7 +297,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -299,7 +308,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where, includeJest: false
                     })
                     // Assert
@@ -311,7 +320,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -322,7 +331,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where, includeExpectEvenMoreJest: false
                     })
                     // Assert
@@ -334,7 +343,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where
                     })
                     // Assert
@@ -345,7 +354,7 @@ describe(`bootstrap-ts-project`, () => {
                     // Arrange
                     const { name, where } = await init();
                     // Act
-                    await bootstrapTsProject({
+                    await tsBoot({
                         name, where, includeZarro: false
                     })
                     // Assert
@@ -353,17 +362,18 @@ describe(`bootstrap-ts-project`, () => {
                         .not.toHaveInstalledDevDependency("zarro");
                 });
 
-                async function init() {
-                    const sandbox = await Sandbox.create();
-                    return {
-                        name: faker.random.alphaNumeric(5),
-                        sandbox,
-                        where: sandbox.path
-                    }
-                }
             });
         });
     });
+
+    async function init() {
+        const sandbox = await Sandbox.create();
+        return {
+            name: faker.random.alphaNumeric(5),
+            sandbox,
+            where: sandbox.path
+        }
+    }
 
     let fakeGit = true;
 
