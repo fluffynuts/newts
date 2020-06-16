@@ -5,7 +5,8 @@
     ],
     "jsRules": {},
     "rules": {
-        "quotemark": [ true, "double"]
+        "quotemark": [ true, "double"],
+        "one-variable-per-declaration": false
     },
     "rulesDirectory": []
 }

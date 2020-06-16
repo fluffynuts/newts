@@ -48,7 +48,8 @@ export async function tsBoot(options: BootstrapOptions) {
         const isNew = await initPackage();
         await setupPackageJsonDefaults(sanitizedOptions, isNew);
         await installPackages(sanitizedOptions);
-        await generateTsLintConfig();
+
+        await generateTsLintConfig(sanitizedOptions);
         await generateTsConfig();
         await generateJestConfig();
         await addTestNpmScript();
@@ -111,6 +112,7 @@ async function initGit(options: InternalBootstrapOptions) {
 }
 
 async function setupGitIgnore() {
+    // TODO
 }
 
 async function createFolderIfNotExists(options: InternalBootstrapOptions) {
@@ -129,7 +131,33 @@ async function runInFolder(
     }
 }
 
-async function generateTsLintConfig() {
+const defaultTsLintOptions = {
+    "defaultSeverity": "error",
+    "extends": [
+        "tslint:recommended"
+    ],
+    "jsRules": {},
+    "rules": {
+        "quotemark": [true, "double"],
+        "one-variable-per-declaration": false,
+        "ordered-imports": false,
+        "no-console": false
+    },
+    "rulesDirectory": []
+}
+
+async function generateTsLintConfig(options: InternalBootstrapOptions) {
+    if (!options.includeLinter) {
+        return;
+    }
+    await writeTextFile(
+        path.join(options.fullPath, "tslint.json"),
+        JSON.stringify(defaultTsLintOptions)
+    )
+}
+
+class Moo {
+    private _foo = "";
 }
 
 async function setupPackageJsonDefaults(
@@ -190,27 +218,33 @@ async function installPackages(options: InternalBootstrapOptions) {
 }
 
 async function generateTsConfig() {
+    // TODO
 }
 
 async function generateJestConfig() {
+    // TODO
 }
 
 async function addBuildNpmScript() {
+    // TODO
 }
 
 async function addPublishNpmScript() {
+    // TODO
 }
 
 async function addPublishBetaNpmScript() {
+    // TODO
 }
 
 async function addTestNpmScript() {
+    // TODO
 }
 
 function validateNodeVersionAtLeast(requireMajor: number, requireMinor: number) {
     const [major, minor] = process.version.replace(/^v/, "")
         .split(".")
-        .map(s => parseInt(s))
+        .map(s => parseInt(s, 10))
         .map(i => isNaN(i) ? 0 : i);
     if (major < requireMajor || minor < requireMinor) {
         throw new Error(

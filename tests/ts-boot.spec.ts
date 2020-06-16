@@ -7,6 +7,9 @@ import { tsBoot, NpmPackage, sanitizeOptions } from "../src/ts-boot";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
+import { promises as fs } from "fs";
+
+const { readFile } = fs;
 
 describe(`bootstrap-ts-project`, () => {
     describe(`validating options`, () => {
@@ -93,7 +96,7 @@ describe(`bootstrap-ts-project`, () => {
                 // Assert
             });
         });
-        describe("when initializeGit is false", function() {
+        describe("when initializeGit is false", () => {
             it(`should not initialize git`, async () => {
                 // Arrange
                 fakeGit = false;
@@ -193,22 +196,38 @@ describe(`bootstrap-ts-project`, () => {
             });
         });
 
-        describe("installing required packages", function() {
+        describe("installing required packages", () => {
             describe(`assuming npm runs...`, () => {
-                it(`should install tslint by default`, async () => {
-                    // Arrange
+                describe(`tslint`, () => {
+                    it(`should install tslint by default`, async () => {
+                        // Arrange
 
-                    const
-                        name = faker.random.alphaNumeric(5),
-                        sandbox = await Sandbox.create(),
-                        where = sandbox.path;
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("tslint");
+                        const
+                            name = faker.random.alphaNumeric(5),
+                            sandbox = await Sandbox.create(),
+                            where = sandbox.path;
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("tslint");
+                    });
+
+                    it(`should skip tslint on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name,
+                            where,
+                            includeLinter: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("tslint");
+                    });
                 });
 
                 it(`should install typescript`, async () => {
@@ -227,151 +246,264 @@ describe(`bootstrap-ts-project`, () => {
                         .toHaveInstalledDevDependency("typescript");
                 });
 
-                it(`should skip tslint on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name,
-                        where,
-                        includeLinter: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("tslint");
-                });
+                describe(`@node/types`, () => {
+                    it(`should install @types/node by default`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("@types/node");
+                    });
 
-                // node types
-                it(`should install @types/node by default`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("@types/node");
-                });
-
-                it(`should skip @types/node on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where, includeNodeTypes: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("@types/node");
+                    it(`should skip @types/node on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where, includeNodeTypes: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("@types/node");
+                    });
                 });
                 // faker
-                it(`should install faker and @types/faker by default`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("faker");
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("@types/faker");
+                describe(`faker`, () => {
+                    it(`should install faker and @types/faker by default`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("faker");
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("@types/faker");
+                    });
+                    it(`should skip faker on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where, includeFaker: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("faker");
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("@types/faker");
+                    });
                 });
-                it(`should skip faker on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where, includeFaker: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("faker");
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("@types/faker");
+                describe(`jest`, () => {
+                    it(`should install jest by default`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("jest");
+                    });
+                    it(`should skip jest on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where, includeJest: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("jest");
+                    });
                 });
-                // jest
-                it(`should install jest by default`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("jest");
-                });
-                it(`should skip jest on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where, includeJest: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("jest");
-                });
-                // expect even more jest
-                it(`should install expect-even-more-jest by default`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("expect-even-more-jest");
-                });
-                it(`should skip expect-even-more-jest on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where, includeExpectEvenMoreJest: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("expect-even-more-jest");
-                });
-                // zarro
-                it(`should install zarro by default`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .toHaveInstalledDevDependency("zarro");
-                });
-                it(`should skip zarro on request`, async () => {
-                    // Arrange
-                    const { name, where } = await init();
-                    // Act
-                    await tsBoot({
-                        name, where, includeZarro: false
-                    })
-                    // Assert
-                    expect(spawnModule)
-                        .not.toHaveInstalledDevDependency("zarro");
+                describe(`expect-even-more-jest`, () => {
+                    it(`should install expect-even-more-jest by default`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("expect-even-more-jest");
+                    });
+                    it(`should skip expect-even-more-jest on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where, includeExpectEvenMoreJest: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("expect-even-more-jest");
+                    });
                 });
 
+                describe(`zarro`, () => {
+                    it(`should install zarro by default`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .toHaveInstalledDevDependency("zarro");
+                    });
+                    it(`should skip zarro on request`, async () => {
+                        // Arrange
+                        const { name, where } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where, includeZarro: false
+                        })
+                        // Assert
+                        expect(spawnModule)
+                            .not.toHaveInstalledDevDependency("zarro");
+                    });
+                });
+            });
+        });
+
+        describe(`establish baseline configurations`, () => {
+            describe(`tslint`, () => {
+                it(`should not generate tslint.json when tslint not installed`, async () => {
+                    // Arrange
+                    const
+                        { name, where, tslintPath } = await init();
+                    // Act
+                    await tsBoot({
+                        name, where,
+                        includeLinter: false
+                    });
+                    // Assert
+                    expect(tslintPath)
+                        .not.toBeFile();
+                });
+                it(`should generate tslint.json when tslint installed (default)`, async () => {
+                    // Arrange
+                    const
+                        { name, where, tslintPath } = await init();
+                    // Act
+                    await tsBoot({
+                        name, where
+                    });
+                    // Assert
+                    expect(tslintPath)
+                        .toBeFile();
+                });
+
+                describe(`rules`, () => {
+                    it(`should extend tslint:recommended`, async () => {
+                        // Arrange
+                        const {
+                            name,
+                            where,
+                            tslintPath
+                        } = await init();
+                        // Act
+                        await tsBoot({
+                            name, where
+                        });
+                        const result = JSON.parse(await readTextFile(tslintPath));
+                        // Assert
+                        expect(result.extends)
+                            .toBeArray();
+                        expect(result.extends)
+                            .toContain("tslint:recommended");
+                    });
+                    it(`should default to error`, async () => {
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.defaultSeverity)
+                            .toEqual("error");
+                    });
+                    it(`should have empty jsRules`, async () => {
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.jsRules)
+                            .toExist();
+                        expect(Object.keys(result.jsRules))
+                            .toBeEmptyArray();
+                    });
+                    // double-quotes won a long time ago. Let those single-quotes
+                    // go!
+                    it(`should require double-quotes`, async () => {
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.rules.quotemark)
+                            .toEqual([true, "double"]);
+                    });
+                    it(`should allow multi-line declarations`, async () => {
+                        // this is a personal style choice, but it can make
+                        //  declaration blocks easier (imo) to understand
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.rules["one-variable-per-declaration"])
+                            .toBeFalse();
+                    });
+                    it(`should not enforce ordered imports`, async () => {
+                        // because ordered imports can interfere with jest mocks
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.rules["ordered-imports"])
+                            .toBeFalse();
+                    });
+                    it(`should not enforce no-console`, async () => {
+                        // -> console.{error|log} (at least) are valid for cli apps
+                        // -> zen debugging!
+                        // Arrange
+                        // Act
+                        const result = await bootDefaultLinter();
+                        // Assert
+                        expect(result.rules["no-console"])
+                            .toBeFalse();
+                    });
+                });
+
+                async function bootDefaultLinter() {
+                    const { name, where, tslintPath } = await init();
+                    await tsBoot({ name, where });
+                    return JSON.parse(await readTextFile(tslintPath));
+                }
             });
         });
     });
 
+    function readTextFile(at: string): Promise<string> {
+        return readFile(at, { encoding: "utf8" });
+    }
+
     async function init() {
-        const sandbox = await Sandbox.create();
+        const
+            sandbox = await Sandbox.create(),
+            name = faker.random.alphaNumeric(5);
         return {
-            name: faker.random.alphaNumeric(5),
+            name,
             sandbox,
-            where: sandbox.path
+            where: sandbox.path,
+            tslintPath: path.join(sandbox.path, name, "tslint.json")
         }
     }
 
