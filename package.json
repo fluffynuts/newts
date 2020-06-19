@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "files": [
+    "dist/**/*",
+    ".gitignore",
+    "jest.config.js"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "jest",

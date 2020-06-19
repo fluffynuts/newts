@@ -3,13 +3,13 @@ import * as spawnModule from "../src/spawn";
 jest.doMock("../src/spawn", () => spawnModule);
 import "expect-even-more-jest";
 import "./matchers";
-import { tsBoot, NpmPackage, sanitizeOptions } from "../src/ts-boot";
+import { tsBoot, NpmPackage, sanitizeOptions, BootstrapOptions } from "../src/ts-boot";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
 import { promises as fs } from "fs";
 
-const { readFile } = fs;
+const { readFile, writeFile } = fs;
 
 describe(`bootstrap-ts-project`, () => {
     describe(`validating options`, () => {
@@ -57,7 +57,7 @@ describe(`bootstrap-ts-project`, () => {
                 sandbox = await Sandbox.create(),
                 where = sandbox.fullPathFor("projects");
             // Act
-            await tsBoot({ name, where });
+            await runTsBoot({ name, where });
             // Assert
             expect(path.join(where, name))
                 .toBeFolder();
@@ -77,7 +77,7 @@ describe(`bootstrap-ts-project`, () => {
                     projectDir = sandbox.fullPathFor(name),
                     gitDir = path.join(projectDir, ".git");
                 // Act
-                await tsBoot(
+                await runTsBoot(
                     {
                         name,
                         where
@@ -90,10 +90,12 @@ describe(`bootstrap-ts-project`, () => {
             it(`should generate the .gitignore file`, async () => {
                 // Arrange
                 const
-                    { name, where, sandbox } = await init();
+                    { name, where, gitignorePath } = await init();
                 // Act
-                await tsBoot({ where, name });
+                await runTsBoot({ where, name });
                 // Assert
+                expect(gitignorePath)
+                    .toBeFile();
             });
         });
         describe("when initializeGit is false", () => {
@@ -107,7 +109,7 @@ describe(`bootstrap-ts-project`, () => {
                     projectDir = sandbox.fullPathFor(name),
                     gitDir = path.join(projectDir, ".git");
                 // Act
-                await tsBoot(
+                await runTsBoot(
                     {
                         name,
                         where,
@@ -131,7 +133,7 @@ describe(`bootstrap-ts-project`, () => {
                 expect(packageJsonFullPath)
                     .not.toBeFile();
                 // Act
-                await tsBoot({
+                await runTsBoot({
                     name,
                     where
                 });
@@ -185,7 +187,7 @@ describe(`bootstrap-ts-project`, () => {
                     JSON.stringify(pkg)
                 );
                 // Act
-                await tsBoot({
+                await runTsBoot({
                     name,
                     where
                 });
@@ -207,7 +209,7 @@ describe(`bootstrap-ts-project`, () => {
                             sandbox = await Sandbox.create(),
                             where = sandbox.path;
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -219,7 +221,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name,
                             where,
                             includeLinter: false
@@ -237,7 +239,7 @@ describe(`bootstrap-ts-project`, () => {
                         sandbox = await Sandbox.create(),
                         where = sandbox.path;
                     // Act
-                    await tsBoot({
+                    await runTsBoot({
                         name,
                         where
                     });
@@ -251,7 +253,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -263,7 +265,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where, includeNodeTypes: false
                         })
                         // Assert
@@ -277,7 +279,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -290,7 +292,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where, includeFaker: false
                         })
                         // Assert
@@ -305,7 +307,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -316,7 +318,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where, includeJest: false
                         })
                         // Assert
@@ -329,7 +331,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -340,7 +342,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where, includeExpectEvenMoreJest: false
                         })
                         // Assert
@@ -354,7 +356,7 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         })
                         // Assert
@@ -365,13 +367,36 @@ describe(`bootstrap-ts-project`, () => {
                         // Arrange
                         const { name, where } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where, includeZarro: false
                         })
                         // Assert
                         expect(spawnModule)
                             .not.toHaveInstalledDevDependency("zarro");
                     });
+                });
+
+                it(`should install cross-env`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await runTsBoot({
+                        name, where, includeZarro: faker.random.boolean()
+                    });
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("cross-env");
+                });
+                it(`should install npm-run-all`, async () => {
+                    // Arrange
+                    const { name, where } = await init();
+                    // Act
+                    await runTsBoot({
+                        name, where, includeZarro: faker.random.boolean()
+                    });
+                    // Assert
+                    expect(spawnModule)
+                        .toHaveInstalledDevDependency("npm-run-all");
                 });
             });
         });
@@ -383,7 +408,7 @@ describe(`bootstrap-ts-project`, () => {
                     const
                         { name, where, tslintPath } = await init();
                     // Act
-                    await tsBoot({
+                    await runTsBoot({
                         name, where,
                         includeLinter: false
                     });
@@ -396,7 +421,7 @@ describe(`bootstrap-ts-project`, () => {
                     const
                         { name, where, tslintPath } = await init();
                     // Act
-                    await tsBoot({
+                    await runTsBoot({
                         name, where
                     });
                     // Assert
@@ -413,7 +438,7 @@ describe(`bootstrap-ts-project`, () => {
                             tslintPath
                         } = await init();
                         // Act
-                        await tsBoot({
+                        await runTsBoot({
                             name, where
                         });
                         const result = JSON.parse(await readTextFile(tslintPath));
@@ -484,15 +509,199 @@ describe(`bootstrap-ts-project`, () => {
 
                 async function bootDefaultLinter() {
                     const { name, where, tslintPath } = await init();
-                    await tsBoot({ name, where });
+                    await runTsBoot({ name, where });
                     return JSON.parse(await readTextFile(tslintPath));
+                }
+            });
+
+            describe(`jest.config.js`, () => {
+                it(`should clear mocks`, async () => {
+                    // Arrange
+                    // Act
+                    const jestConfig = await bootDefaultJestConfig();
+                    // Assert
+                    expect(jestConfig.clearMocks)
+                        .toBeTrue();
+                });
+
+                it(`should have the ts-jest preset`, async () => {
+                    // Arrange
+                    // Act
+                    const jestConfig = await bootDefaultJestConfig();
+                    // Assert
+                    expect(jestConfig.preset)
+                        .toEqual("ts-jest");
+                });
+
+                it(`should set node test environment`, async () => {
+                    // Arrange
+                    // Act
+                    const jestConfig = await bootDefaultJestConfig();
+                    // Assert
+                    expect(jestConfig.testEnvironment)
+                        .toEqual("node");
+                });
+
+                async function bootDefaultJestConfig() {
+                    const { name, where, jestConfigPath } = await init();
+                    await tsBoot({ name, where, skipTsConfig: true });
+                    return require(jestConfigPath);
+                }
+            });
+            describe(`tsconfig.json`, () => {
+                let tsconfig: any;
+                beforeAll(async () => {
+                    jest.setTimeout(60000);
+                    mockSpawn();
+                    // override install to get actual tsc so we can use the result from tsc --init
+                    npmInstallModifier = () => ["install", "--save-dev", "--no-progress", "typescript"];
+                    tsconfig = await bootDefaultTsConfig();
+                    jest.setTimeout(5000);
+                });
+                afterAll(() => {
+                    npmInstallModifier = undefined;
+                });
+
+                it(`should target ES2018`, async () => {
+                    // provides cleaner output than es5 and works on modern things
+                    // Arrange
+                    // Act
+                    // Assert
+                    expect(tsconfig)
+                        .toExist();
+                    expect(tsconfig.compilerOptions)
+                        .toExist();
+                    expect(tsconfig.compilerOptions.target)
+                        .toEqual("ES2018");
+                });
+                it(`should emit declarations`, async () => {
+                    // Arrange
+                    // Act
+                    // Assert
+                    expect(tsconfig.compilerOptions.declaration)
+                        .toBeTrue();
+                });
+
+                it(`should set the outDir to ./dist`, async () => {
+                    // Arrange
+                    // Act
+                    // Assert
+                    expect(tsconfig.compilerOptions.outDir)
+                        .toEqual("./dist");
+                });
+                it(`should exclude test and dist from compilation`, async () => {
+                    // Arrange
+                    // Act
+                    // Assert
+                    expect(tsconfig.exclude)
+                        .toBeEquivalentTo(["tests", "dist"]);
+                });
+
+                async function bootDefaultTsConfig() {
+                    const { name, where, tsconfigPath } = await init();
+                    await tsBoot({ name, where });
+                    let withoutComments: string;
+                    const contents = await readTextFile(tsconfigPath);
+                    withoutComments = contents.replace(
+                        /\/\*.*\*\//g, ""
+                    ).replace(
+                        /\/\/.*/g, ""
+                    );
+                    try {
+                        return JSON.parse(withoutComments);
+                    } catch (e) {
+                        console.log({
+                            e,
+                            withoutComments
+                        });
+                        throw e;
+                    }
                 }
             });
         });
     });
 
+    describe(`npm scripts`, () => {
+        it(`should add build script pointing to tsc`, async () => {
+            // Arrange
+            // Act
+            const result = await bootDefaultPackageJson();
+            // Assert
+            expect(result)
+                .toExist();
+            expect(result.scripts)
+                .toExist();
+            expect(result.scripts.build)
+                .toEqual("tsc");
+        });
+
+        it(`should add test script`, async () => {
+            // Arrange
+            const result = await bootDefaultPackageJson();
+            // Act
+            expect(result.scripts.test)
+                .toEqual("jest");
+            // Assert
+        });
+
+        it(`should add lint script`, async () => {
+            // Arrange
+            const result = await bootDefaultPackageJson();
+            // Act
+            expect(result.scripts.lint)
+                .toEqual("tslint -p .");
+            // Assert
+        });
+
+        describe(`when zarro enabled`, () => {
+            it(`should add the zarro script`, async () => {
+                // Arrange
+                const result = await bootDefaultPackageJson();
+                // Act
+                expect(result.scripts.zarro)
+                    .toEqual("zarro");
+                // Assert
+            });
+            it(`should add beta release script`, async () => {
+                // Arrange
+                const result = await bootDefaultPackageJson();
+                // Act
+                expect(result.scripts["prerelease-beta"])
+                    .toEqual("run-s build lint test");
+                expect(result.scripts["release-beta"])
+                    .toEqual("cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"");
+                // Assert
+            });
+
+            it(`should add release script`, async () => {
+                // Arrange
+                const result = await bootDefaultPackageJson();
+                // Act
+                expect(result.scripts.prerelease)
+                    .toEqual("run-s build lint test");
+                expect(result.scripts.release)
+                    .toEqual("cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"");
+                // Assert
+            });
+        });
+
+        async function bootDefaultPackageJson() {
+            const { name, where, packageJsonPath } = await init();
+            await runTsBoot({ name, where });
+            try {
+                return JSON.parse(await readTextFile(packageJsonPath));
+            } catch (e) {
+                return undefined;
+            }
+        }
+    });
+
     function readTextFile(at: string): Promise<string> {
         return readFile(at, { encoding: "utf8" });
+    }
+
+    function writeTextFile(at: string, contents: string): Promise<void> {
+        return writeFile(at, contents, { encoding: "utf8" });
     }
 
     async function init() {
@@ -503,37 +712,70 @@ describe(`bootstrap-ts-project`, () => {
             name,
             sandbox,
             where: sandbox.path,
-            tslintPath: path.join(sandbox.path, name, "tslint.json")
+            tslintPath: path.join(sandbox.path, name, "tslint.json"),
+            tsconfigPath: path.join(sandbox.path, name, "tsconfig.json"),
+            packageJsonPath: path.join(sandbox.path, name, "package.json"),
+            gitignorePath: path.join(sandbox.path, name, ".gitignore"),
+            jestConfigPath: path.join(sandbox.path, name, "jest.config.js")
         }
     }
 
     let fakeGit = true;
+    let npmInstallModifier: undefined | ((args: string[]) => string[]);
 
     beforeEach(() => {
-        fakeGit = true;
-        const original = spawnModule.spawn;
-        spyOn(spawnModule, "spawn").and.callFake((cmd, args, opts) => {
-            const
-                basename = path.basename(cmd),
-                extname = path.extname(basename),
-                command = basename.substr(0, basename.length - extname.length).toLowerCase();
-            if (command === "npm" &&
-                args[0] === "install") {
-                // suppress
-                return;
-            }
-            if (fakeGit && command === "git") {
-                // suppress
-                return;
-            }
-            return original.call(null, cmd, args, opts);
-        });
+        mockSpawn();
     });
 
-    async function readPkg(sandbox: Sandbox, relPath: string): Promise<NpmPackage> {
-        return JSON.parse(
-            await sandbox.readTextFile(relPath)
-        );
+    function mockSpawn() {
+        try {
+            fakeGit = true;
+            npmInstallModifier = undefined;
+            const original = spawnModule.spawn;
+            spyOn(spawnModule, "spawn").and.callFake((cmd, args, opts) => {
+                const
+                    basename = path.basename(cmd),
+                    extname = path.extname(basename),
+                    command = basename.substr(0, basename.length - extname.length).toLowerCase();
+                if (!npmInstallModifier &&
+                    command === "npm" &&
+                    args[0] === "install") {
+                    // suppress
+                    return;
+                }
+                const cmdIsNpm = isNpm(cmd);
+                if (npmInstallModifier &&
+                    cmdIsNpm &&
+                    args[0] === "install") {
+                    args = npmInstallModifier(args);
+                }
+                if (fakeGit && command === "git") {
+                    // suppress
+                    return;
+                }
+                return original.call(null, cmd, args, opts);
+            });
+        } catch (e) {
+            if (e.message && e.message.match(/spawn has already been spied upon/)) {
+                return;
+            }
+            throw e;
+        }
+    }
+
+    function runTsBoot(options: BootstrapOptions) {
+        return tsBoot({
+            skipTsConfig: true,
+            ...options
+        })
+    }
+
+    function isNpm(cmd: string) {
+        const
+            bn = path.basename(cmd),
+            ext = path.extname(bn),
+            c = bn.replace(ext, "");
+        return c === "npm";
     }
 
     afterEach(async () => {

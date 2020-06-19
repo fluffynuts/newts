@@ -1,6 +1,6 @@
 import _which from "which";
 import path from "path";
-import { promises as fs } from "fs";
+import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { spawn } from "./spawn";
 
 validateNodeVersionAtLeast(10, 12);
@@ -20,6 +20,9 @@ export interface BootstrapOptions {
     setupTestScript?: boolean;
     setupBuildScript?: boolean;
     setupPublishScripts?: boolean;
+
+    // should only be useful from testing
+    skipTsConfig?: boolean;
 }
 
 export const defaultOptions: Partial<BootstrapOptions> = {
@@ -49,14 +52,16 @@ export async function tsBoot(options: BootstrapOptions) {
         await setupPackageJsonDefaults(sanitizedOptions, isNew);
         await installPackages(sanitizedOptions);
 
-        await generateTsLintConfig(sanitizedOptions);
-        await generateTsConfig();
-        await generateJestConfig();
-        await addTestNpmScript();
-        await addBuildNpmScript();
-        await addPublishNpmScript();
-        await addPublishBetaNpmScript();
+        await addNpmScripts(sanitizedOptions);
+
+        await generateConfigurations(sanitizedOptions);
     });
+}
+
+async function generateConfigurations(sanitizedOptions: InternalBootstrapOptions) {
+    await generateTsLintConfig(sanitizedOptions);
+    await generateTsConfig(sanitizedOptions);
+    await generateJestConfig();
 }
 
 async function checkNpm() {
@@ -112,7 +117,60 @@ async function initGit(options: InternalBootstrapOptions) {
 }
 
 async function setupGitIgnore() {
-    // TODO
+    await copyBundledFile(".gitignore");
+}
+
+async function copyBundledFile(withName: string) {
+    const
+        pkgDir = await findMyPackageDir(),
+        mine = path.join(pkgDir, withName);
+    await cp(mine, withName);
+}
+
+async function cp(from: string, to: string) {
+    return new Promise((_resolve, _reject) => {
+        let completed = false;
+        const
+            outStream = createWriteStream(to, { flags: "w" }),
+            isComplete = () => {
+                if (completed) {
+                    return true;
+                }
+                completed = true;
+                return false;
+            },
+            resolve = () => {
+                if (isComplete()) {
+                    return;
+                }
+                outStream.end(() => _resolve());
+            },
+            reject = (e: Error) => {
+                if (isComplete()) {
+                    return;
+                }
+                outStream.end(() => _reject(e));
+            };
+        createReadStream(from)
+            .on("end", resolve)
+            .on("error", reject)
+            .pipe(outStream);
+    });
+}
+
+async function findMyPackageDir() {
+    let current = __dirname;
+    while (true) {
+        const test = path.join(current, "package.json");
+        if (await fileExists(test)) {
+            return current;
+        }
+        const next = path.dirname(current);
+        if (next === current) {
+            throw new Error("can't find my own package dir");
+        }
+        current = next;
+    }
 }
 
 async function createFolderIfNotExists(options: InternalBootstrapOptions) {
@@ -156,10 +214,6 @@ async function generateTsLintConfig(options: InternalBootstrapOptions) {
     )
 }
 
-class Moo {
-    private _foo = "";
-}
-
 async function setupPackageJsonDefaults(
     options: InternalBootstrapOptions,
     isNew: boolean
@@ -196,7 +250,9 @@ const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     "@types/faker": o => !!o.includeFaker,
     jest: o => !!o.includeJest,
     "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
-    zarro: o => !!o.includeZarro
+    zarro: o => !!o.includeZarro,
+    "npm-run-all": () => true,
+    "cross-env": () => true
 };
 
 async function installPackages(options: InternalBootstrapOptions) {
@@ -217,28 +273,146 @@ async function installPackages(options: InternalBootstrapOptions) {
     await runNpm(args);
 }
 
-async function generateTsConfig() {
-    // TODO
+async function generateTsConfig(sanitizedOptions: InternalBootstrapOptions) {
+    if (sanitizedOptions.skipTsConfig) {
+        return;
+    }
+    await runNpm(["run", "build", "--", "--init"]);
+    const fname = "tsconfig.json";
+    if (!(await fileExists(fname))) {
+        throw new Error(`tsc --init didn't produce a ${ fname }?`);
+    }
+
+    const lines = await readLines(fname);
+    const updated = lines.map(setTarget)
+        .map(uncommentDeclaration)
+        .map(setDeclaration)
+        .map(uncommentOutDir)
+        .map(setOutDirToDist);
+    const newLines: string[] = [
+        `"exclude": [`,
+        `  "tests",`,
+        `  "dist"`,
+        `]`
+    ];
+
+    const withComma = addCommaToCompilerOptionsBlock(updated);
+    const lastBraceLine = withComma.reduce(
+        (acc, cur, idx) => cur.indexOf("}") > -1 ? idx : acc, 0
+    );
+    withComma.splice(lastBraceLine, 0, ...newLines);
+    await writeLines(fname, withComma);
+}
+
+function addCommaToCompilerOptionsBlock(updated: string[]) {
+    let braceCount = 0;
+    return updated.map(line => {
+        const decommented = decomment(line);
+        if (decommented.indexOf("{") > -1) {
+            braceCount++;
+            return line;
+        }
+        if (decommented.indexOf("}") > -1) {
+            braceCount--;
+            if (braceCount === 1) {
+                return line + ",";
+            }
+        }
+        return line;
+    });
+}
+
+function decomment(line: string) {
+    return line.replace(/\/\/.*/, "")
+        .replace(/\/\*.*\*\//g, "");
+}
+
+function setOutDirToDist(line: string) {
+    return setJsonProp(line, "outDir", "./dist");
+}
+
+function uncommentOutDir(line: string): string {
+    return uncommentLineIfIsForProperty(line, "outDir");
+}
+
+function uncommentDeclaration(line: string): string {
+    return uncommentLineIfIsForProperty(line, "declaration");
+}
+
+function uncommentLineIfIsForProperty(line: string, prop: string) {
+    return line.match(new RegExp(`^\\s*//\\s"${ prop }"`))
+        ? line.replace(/\/\//, "")
+        : line;
+}
+
+function setDeclaration(line: string): string {
+    return setJsonProp(line, "declaration", true);
+}
+
+function setTarget(line: string): string {
+    return setJsonProp(line, "target", "ES2018");
+}
+
+function setJsonProp(line: string, prop: string, value: any): string {
+    if (!line.match(new RegExp(`^\\s*"${ prop }"`))) {
+        return line;
+    }
+    return replaceNthMatch(line, /("[^"]+")/, 2, JSON.stringify(value));
 }
 
 async function generateJestConfig() {
-    // TODO
+    await copyBundledFile("jest.config.js");
 }
 
 async function addBuildNpmScript() {
-    // TODO
+    await addScript("build", "tsc");
 }
 
-async function addPublishNpmScript() {
-    // TODO
+async function addScript(name: string, script: string) {
+    const pkg = await readPackageJson();
+    pkg.scripts = pkg.scripts || {};
+    pkg.scripts[name] = script;
+    await writePackageJson(pkg);
 }
 
-async function addPublishBetaNpmScript() {
-    // TODO
+async function addReleaseScript() {
+    await addScript("prerelease", "run-s build lint test");
+    await addScript(
+        "release",
+        "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\""
+    );
 }
 
-async function addTestNpmScript() {
-    // TODO
+async function addBetaReleaseScript() {
+    await addScript("prerelease-beta", "run-s build lint test")
+    await addScript(
+        "release-beta",
+        "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\""
+    );
+}
+
+function addTestNpmScript() {
+    return addScript("test", "jest");
+}
+
+function addLintNpmScript() {
+    return addScript("lint", "tslint -p .");
+}
+
+function addZarroNpmScript() {
+    return addScript("zarro", "zarro");
+}
+
+async function addNpmScripts(sanitizedOptions: InternalBootstrapOptions) {
+    await addBuildNpmScript();
+    await addLintNpmScript();
+    await addTestNpmScript();
+
+    if (sanitizedOptions.includeZarro) {
+        await addZarroNpmScript();
+        await addReleaseScript();
+        await addBetaReleaseScript();
+    }
 }
 
 function validateNodeVersionAtLeast(requireMajor: number, requireMinor: number) {
@@ -286,6 +460,16 @@ async function readTextFile(at: string): Promise<string> {
     throw new Error(`can't read file at ${ fullpath }`);
 }
 
+async function readLines(at: string): Promise<string[]> {
+    const contents = await readTextFile(at);
+    return (contents || "").split("\n").map(l => l.replace(/\r$/, ""));
+}
+
+async function writeLines(at: string, lines: string[]): Promise<void> {
+    const contents = lines.join("\n");
+    await writeTextFile(at, contents);
+}
+
 function writeTextFile(at: string, contents: string): Promise<void> {
     return fs.writeFile(at, contents, { encoding: "utf8" });
 }
@@ -326,4 +510,64 @@ export interface NpmPackage {
     dependencies: Dictionary<string>;
 }
 
+// borrowed from https://stackoverflow.com/a/7958627/1697008
+function replaceNthMatch(
+    original: string,
+    pattern: RegExp,
+    n: number,
+    replace: string | ((input: string) => string)) {
+    let parts, tempParts;
 
+    if (pattern.constructor === RegExp) {
+
+        // If there's no match, bail
+        if (original.search(pattern) === -1) {
+            return original;
+        }
+
+        // Every other item should be a matched capture group;
+        // between will be non-matching portions of the substring
+        parts = original.split(pattern);
+
+        // If there was a capture group, index 1 will be
+        // an item that matches the RegExp
+        if (parts[1].search(pattern) !== 0) {
+            throw { name: "ArgumentError", message: "RegExp must have a capture group" };
+        }
+    } else if (pattern.constructor === String) {
+        parts = original.split(pattern);
+        // Need every other item to be the matched string
+        tempParts = [];
+
+        for (let i = 0; i < parts.length; i++) {
+            tempParts.push(parts[i]);
+
+            // Insert between, but don't tack one onto the end
+            if (i < parts.length - 1) {
+                tempParts.push(pattern);
+            }
+        }
+        parts = tempParts;
+    } else {
+        throw { name: "ArgumentError", message: "Must provide either a RegExp or String" };
+    }
+
+    // Parens are unnecessary, but explicit. :)
+    const indexOfNthMatch = (n * 2) - 1;
+
+    if (parts[indexOfNthMatch] === undefined) {
+        // There IS no Nth match
+        return original;
+    }
+
+    const replaceWith = typeof (replace) === "function"
+        ? replace(parts[indexOfNthMatch])
+        : replace;
+
+    // Update our parts array with the new value
+    parts[indexOfNthMatch] = replaceWith;
+
+    // Put it back together and return
+    return parts.join("");
+
+}
