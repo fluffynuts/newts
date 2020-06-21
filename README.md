@@ -10,4 +10,6 @@ Because I'm making enough of them that:
 
 
 ## Status
-:construction:
+- this project is _not yet_ ready for general consumption, but I'd like to reserve a name (:
+- the core work is done
+- cli is coming

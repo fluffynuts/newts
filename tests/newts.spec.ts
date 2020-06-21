@@ -3,7 +3,7 @@ import * as spawnModule from "../src/spawn";
 jest.doMock("../src/spawn", () => spawnModule);
 import "expect-even-more-jest";
 import "./matchers";
-import { tsBoot, NpmPackage, sanitizeOptions, BootstrapOptions } from "../src/ts-boot";
+import { newts, NpmPackage, sanitizeOptions, BootstrapOptions } from "../src/newts";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
@@ -18,7 +18,7 @@ describe(`bootstrap-ts-project`, () => {
                 // Arrange
                 // Act
                 // @ts-ignore
-                await expect(tsBoot())
+                await expect(newts())
                     .rejects.toThrow("No options provided");
                 // Assert
             });
@@ -28,7 +28,7 @@ describe(`bootstrap-ts-project`, () => {
                 // Arrange
                 // Act
                 // @ts-ignore
-                await expect(tsBoot({}))
+                await expect(newts({}))
                     .rejects.toThrow("No project name provided");
                 // Assert
             });
@@ -544,7 +544,7 @@ describe(`bootstrap-ts-project`, () => {
 
                 async function bootDefaultJestConfig() {
                     const { name, where, jestConfigPath } = await init();
-                    await tsBoot({ name, where, skipTsConfig: true });
+                    await newts({ name, where, skipTsConfig: true });
                     return require(jestConfigPath);
                 }
             });
@@ -599,7 +599,7 @@ describe(`bootstrap-ts-project`, () => {
 
                 async function bootDefaultTsConfig() {
                     const { name, where, tsconfigPath } = await init();
-                    await tsBoot({ name, where });
+                    await newts({ name, where });
                     let withoutComments: string;
                     const contents = await readTextFile(tsconfigPath);
                     withoutComments = contents.replace(
@@ -700,10 +700,6 @@ describe(`bootstrap-ts-project`, () => {
         return readFile(at, { encoding: "utf8" });
     }
 
-    function writeTextFile(at: string, contents: string): Promise<void> {
-        return writeFile(at, contents, { encoding: "utf8" });
-    }
-
     async function init() {
         const
             sandbox = await Sandbox.create(),
@@ -764,7 +760,7 @@ describe(`bootstrap-ts-project`, () => {
     }
 
     function runTsBoot(options: BootstrapOptions) {
-        return tsBoot({
+        return newts({
             skipTsConfig: true,
             ...options
         })
