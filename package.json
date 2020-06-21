@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/fluffynuts/bootstrap-ts-module"
+    "url": "https://github.com/fluffynuts/newts"
   },
   "keywords": [],
   "author": {
@@ -33,9 +33,11 @@
   "license": "BSD-3-Clause",
   "devDependencies": {
     "@types/faker": "^4.1.12",
+    "@types/inquirer": "^6.5.0",
     "@types/jest": "^25.2.3",
     "@types/node": "^14.0.9",
     "@types/which": "^1.3.2",
+    "@types/yargs": "^15.0.5",
     "expect-even-more-jest": "^1.3.0",
     "faker": "^4.1.0",
     "filesystem-sandbox": "^1.11.0",
@@ -46,6 +48,8 @@
     "zarro": "^1.49.0"
   },
   "dependencies": {
-    "which": "^2.0.2"
+    "inquirer": "^7.2.0",
+    "which": "^2.0.2",
+    "yargs": "^15.3.1"
   }
 }
