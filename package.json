@@ -1,6 +1,6 @@
 {
   "name": "newts",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "description": "",
   "main": "dist/newts.js",
   "bin": {
@@ -32,7 +32,7 @@
     "type": "git",
     "url": "https://github.com/fluffynuts/newts"
   },
-  "keywords": [],
+  "keywords": ["typescript", "generator", "bootstrap", "module", "library", "quick-start"],
   "author": {
     "name": "Davyd McColl",
     "email": "davydm@gmail.com",
