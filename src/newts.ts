@@ -141,6 +141,18 @@ export function example() {
   console.log("hello, world");
 }
 `);
+    await addBinScript(options);
+}
+
+async function addBinScript(options: InternalBootstrapOptions) {
+    if (!options.isCommandline) {
+        return;
+    }
+
+    const pkg = await readPackageJson();
+    pkg.bin = pkg.bin || {};
+    pkg.bin[options.name] = "./dist/index.js";
+    await writePackageJson(pkg);
 }
 
 async function generateConfigurations(options: InternalBootstrapOptions) {
@@ -613,6 +625,7 @@ export interface NpmPackage {
     name: string;
     version: string;
     files: string[];
+    bin: Dictionary<string>;
     description: string;
     main: string;
     scripts: Dictionary<string>;

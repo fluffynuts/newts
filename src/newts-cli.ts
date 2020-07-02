@@ -1,6 +1,9 @@
+#!/usr/bin/env node
 import yargs = require("yargs");
 import { BootstrapOptions, newts } from "./newts";
 import { ConsoleFeedback } from "./console-feedback";
+import { validateName } from "./validate-name";
+import chalk from "chalk";
 
 function gatherArgs() {
     return yargs.option("name", {
@@ -60,6 +63,8 @@ function ask(q: string): Promise<string> {
     while (!((argv.name as string) || "").trim()) {
         argv.name = await ask("Please give me a name for this module");
     }
+    const feedback = new ConsoleFeedback();
+
     const opts = {
         skipTsConfig: false,
         includeZarro: !argv["no-zarro"],
@@ -75,14 +80,19 @@ function ask(q: string): Promise<string> {
         setupBuildScript: true,
         setupPublishScripts: true,
         setupTestScript: true,
-        feedback: new ConsoleFeedback()
+        feedback,
     } as BootstrapOptions;
 
     try {
+        await validateName(argv.name as string, feedback);
         await newts(opts);
         process.exit(0);
     } catch (e) {
-        console.error(e);
+        if (typeof e.message === "string") {
+            console.error(chalk.red(e.message));
+        } else {
+            console.error(e);
+        }
         process.exit(1);
     }
 
