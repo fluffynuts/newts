@@ -26,7 +26,7 @@
     "release": "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"",
     "zarro": "zarro",
     "start": "ts-node src/newts-cli.ts",
-    "download-licenses": "ts-node download-licenses.ts"
+    "download-licenses": "ts-node tools/download-licenses.ts"
   },
   "repository": {
     "type": "git",

@@ -68,6 +68,7 @@
   },
   "exclude": [
     "tests",
-    "dist"
+    "dist",
+    "tools"
   ]
 }
