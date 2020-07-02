@@ -50,7 +50,7 @@
     "ts-jest": "^26.1.0",
     "tslint": "^6.1.2",
     "typescript": "^3.9.3",
-    "zarro": "^1.49.0"
+    "zarro": "^1.55.0"
   },
   "dependencies": {
     "bent": "^7.3.7",
