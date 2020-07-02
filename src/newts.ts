@@ -221,13 +221,13 @@ async function initGit(options: InternalBootstrapOptions) {
 }
 
 async function setupGitIgnore() {
-    await copyBundledFile(".gitignore");
+    await copyBundledFile(".gitignore", "_gitignore");
 }
 
-async function copyBundledFile(withName: string) {
+async function copyBundledFile(withName: string, fromName?: string) {
     const
         pkgDir = await findMyPackageDir(),
-        mine = path.join(pkgDir, withName);
+        mine = path.join(pkgDir, fromName ?? withName);
     await cp(mine, withName);
 }
 

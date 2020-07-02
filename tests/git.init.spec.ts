@@ -9,6 +9,7 @@ import * as path from "path";
 describe(`newts`, () => {
     describe(`when folder doesn't exist`, () => {
         it(`should create the folder`, async () => {
+            jest.setTimeout(600000);
             // Arrange
             const
                 name = faker.random.alphaNumeric(5),
