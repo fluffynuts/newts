@@ -2,23 +2,23 @@
   "name": "newts",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "files": [
-    "dist/**/*",
-    ".gitignore",
-    "jest.config.js"
+    "dist/**/*"
   ],
   "scripts": {
+    "pretest": "rimraf __sandboxes__",
     "test": "jest",
     "lint": "tslint -p .",
     "autolint": "nodemon -e ts -x \"run-s lint\"",
     "prebuild": "rimraf dist",
     "build": "tsc",
-    "prerelease-beta": "run-s prerelease",
+    "prerelease-beta": "run-s build lint test",
     "release-beta": "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"",
     "prerelease": "run-s build lint test",
     "release": "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"",
-    "zarro": "cross-env BUILD_TOOLS_FOLDER=.tools zarro"
+    "zarro": "zarro",
+    "start": "ts-node src/newts-cli.ts"
   },
   "repository": {
     "type": "git",
@@ -48,6 +48,7 @@
     "zarro": "^1.49.0"
   },
   "dependencies": {
+    "chalk": "^4.1.0",
     "inquirer": "^7.2.0",
     "which": "^2.0.2",
     "yargs": "^15.3.1"

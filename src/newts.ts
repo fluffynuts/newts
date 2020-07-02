@@ -1,11 +1,17 @@
 import _which from "which";
 import path from "path";
-import { createReadStream, createWriteStream, promises as fs } from "fs";
+import { createReadStream, createWriteStream, promises as fs, StatsBase } from "fs";
 import { spawn } from "./spawn";
+import { NullFeedback } from "./null-feedback";
+import { platform } from "os";
 
 validateNodeVersionAtLeast(10, 12);
 
 let npmPath: string;
+
+export interface Feedback {
+    run<T>(label: string, action: AsyncFunc<T>): Promise<T>;
+}
 
 export interface BootstrapOptions {
     name: string;
@@ -20,7 +26,9 @@ export interface BootstrapOptions {
     setupTestScript?: boolean;
     setupBuildScript?: boolean;
     setupPublishScripts?: boolean;
+    isCommandline?: boolean;
 
+    feedback?: Feedback;
     // should only be useful from testing
     skipTsConfig?: boolean;
 }
@@ -40,27 +48,104 @@ export const defaultOptions: Partial<BootstrapOptions> = {
 
 interface InternalBootstrapOptions extends BootstrapOptions {
     fullPath: string;
+    feedback: Feedback;
 }
 
 export async function newts(options: BootstrapOptions) {
     await checkNpm();
     const sanitizedOptions = sanitizeOptions(options);
-    await createFolderIfNotExists(sanitizedOptions);
+    const run = sanitizedOptions.feedback.run.bind(sanitizedOptions.feedback);
+
+    await createModuleFolder(sanitizedOptions);
     await runInFolder(sanitizedOptions.fullPath, async () => {
-        await initGit(sanitizedOptions);
-        const isNew = await initPackage();
-        await setupPackageJsonDefaults(sanitizedOptions, isNew);
-        await installPackages(sanitizedOptions);
+        await initGit(sanitizedOptions)
 
-        await addNpmScripts(sanitizedOptions);
+        const isNew = await run(
+            `initialise package ${ sanitizedOptions.name }`,
+            initPackage
+        );
 
-        await generateConfigurations(sanitizedOptions);
+        await run(`set up package.json defaults`,
+            () => setupPackageJsonDefaults(sanitizedOptions, isNew)
+        );
+
+        await installPackages(sanitizedOptions)
+
+        await run(
+            `add npm scripts`,
+            () => addNpmScripts(sanitizedOptions)
+        );
+
+        await run(
+            `generate configurations`,
+            () => generateConfigurations(sanitizedOptions)
+        );
+
+        await run(
+            `seed project files`,
+            () => seedProjectFiles(sanitizedOptions)
+        );
+
+        await run(
+            `perform initial build`,
+            () => runNpm("run", "build")
+        );
     });
 }
 
-async function generateConfigurations(sanitizedOptions: InternalBootstrapOptions) {
-    await generateTsLintConfig(sanitizedOptions);
-    await generateTsConfig(sanitizedOptions);
+async function seedProjectFiles(options: InternalBootstrapOptions) {
+    await generateSrcIndexFile(options);
+    await generateTestIndexSpecFile(options);
+}
+
+const newline = platform() === "win32"
+    ? "\r\n"
+    : "\n";
+
+async function generateTestIndexSpecFile(options: InternalBootstrapOptions) {
+    if (!options.includeJest) {
+        return;
+    }
+    const headers = [];
+    if (options.includeExpectEvenMoreJest) {
+        headers.push(`import "expect-even-more-jest";`);
+    }
+    if (options.includeFaker) {
+        headers.push(`import * as faker from "faker";`);
+    }
+    await writeTextFile(
+        path.join(options.fullPath, "tests", "index.spec.ts"),
+        `${ headers.join(newline) }
+describe(\`${ options.name }\`, () => {
+    it(\`should pass the example test\`, async () => {
+        // Arrange
+        // Act
+        await expect(Promise.resolve(1))
+            .resolves.toBeGreaterThan(0);
+        // Assert
+    });
+});
+`
+    );
+}
+
+async function generateSrcIndexFile(options: InternalBootstrapOptions) {
+    const header = options.isCommandline
+        ? `#!/usr/bin/env node`
+        : "";
+    await writeTextFile(
+        path.join(options.fullPath, "src", "index.ts"),
+        `${ header }
+// ${ options.name } module entry point
+export function example() {
+  console.log("hello, world");
+}
+`);
+}
+
+async function generateConfigurations(options: InternalBootstrapOptions) {
+    await generateTsLintConfig(options);
+    await generateTsConfig(options);
     await generateJestConfig();
 }
 
@@ -72,8 +157,9 @@ async function checkNpm() {
     npmPath = npm;
 }
 
-type AsyncAction = (() => Promise<void>);
-type Func<Tin, TOut> = ((arg: Tin) => TOut);
+export type AsyncFunc<T> = (() => Promise<T>);
+export type AsyncAction = (() => Promise<void>);
+export type Func<Tin, TOut> = ((arg: Tin) => TOut);
 
 export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOptions {
     if (!options) {
@@ -81,6 +167,9 @@ export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOpt
     }
     if (!options.name) {
         throw new Error("No project name provided");
+    }
+    if (!options.feedback) {
+        options.feedback = new NullFeedback();
     }
     const result = { ...defaultOptions, ...options } as InternalBootstrapOptions;
     if (!result.where) {
@@ -101,19 +190,22 @@ async function initGit(options: InternalBootstrapOptions) {
     if (!options.initializeGit) {
         return;
     }
-    const git = await which("git");
-    if (!git) {
-        throw new Error(
-            `Cannot initialize git in ${ options.fullPath }`
-        );
-    }
-    try {
-        await spawn(git, ["init"]);
-    } catch (e) {
-        throw new Error(`git init fails: ${ e }`);
-    }
+    await options.feedback.run(`initialise git at ${ options.fullPath }`,
+        async () => {
+            const git = await which("git");
+            if (!git) {
+                throw new Error(
+                    `Cannot initialize git in ${ options.fullPath }`
+                );
+            }
+            try {
+                await spawn(git, ["init"]);
+            } catch (e) {
+                throw new Error(`git init fails: ${ e }`);
+            }
 
-    await setupGitIgnore();
+            await setupGitIgnore();
+        });
 }
 
 async function setupGitIgnore() {
@@ -173,8 +265,15 @@ async function findMyPackageDir() {
     }
 }
 
-async function createFolderIfNotExists(options: InternalBootstrapOptions) {
-    await fs.mkdir(options.fullPath, { recursive: true });
+function createModuleFolder(options: InternalBootstrapOptions) {
+    return createFolderIfNotExists(options.fullPath);
+}
+
+async function createFolderIfNotExists(at: string): Promise<void> {
+    if (await folderExists(at)) {
+        return;
+    }
+    await fs.mkdir(at, { recursive: true });
 }
 
 async function runInFolder(
@@ -234,11 +333,11 @@ async function initPackage(): Promise<boolean> {
     if (alreadyExists) {
         return !alreadyExists;
     }
-    await runNpm(["init", "-y"]);
+    await runNpm("init", "-y")
     return true;
 }
 
-function runNpm(args: string[]) {
+function runNpm(...args: string[]) {
     return spawn(npmPath, args);
 }
 
@@ -249,6 +348,8 @@ const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     faker: o => !!o.includeFaker,
     "@types/faker": o => !!o.includeFaker,
     jest: o => !!o.includeJest,
+    "ts-jest": o => !!o.includeJest,
+    "@types/jest": o => !!o.includeJest,
     "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
     zarro: o => !!o.includeZarro,
     "npm-run-all": () => true,
@@ -270,14 +371,17 @@ async function installPackages(options: InternalBootstrapOptions) {
         return;
     }
     const args = ["install", "--save-dev", "--no-progress"].concat(devDeps);
-    await runNpm(args);
+    await options.feedback.run(
+        `install ${ devDeps.length } packages`,
+        () => runNpm(...args)
+    );
 }
 
 async function generateTsConfig(sanitizedOptions: InternalBootstrapOptions) {
     if (sanitizedOptions.skipTsConfig) {
         return;
     }
-    await runNpm(["run", "build", "--", "--init"]);
+    await runNpm("run", "build", "--", "--init");
     const fname = "tsconfig.json";
     if (!(await fileExists(fname))) {
         throw new Error(`tsc --init didn't produce a ${ fname }?`);
@@ -434,9 +538,17 @@ function which(program: string): Promise<string | undefined> {
 }
 
 async function fileExists(at: string): Promise<boolean> {
+    return runStat(at, st => st.isFile());
+}
+
+async function folderExists(at: string): Promise<boolean> {
+    return runStat(at, st => st.isDirectory());
+}
+
+async function runStat(at: string, func: Func<StatsBase<any>, boolean>): Promise<boolean> {
     try {
         const st = await fs.stat(at);
-        return st && st.isFile();
+        return st && func(st);
     } catch (e) {
         return false;
     }
@@ -470,7 +582,9 @@ async function writeLines(at: string, lines: string[]): Promise<void> {
     await writeTextFile(at, contents);
 }
 
-function writeTextFile(at: string, contents: string): Promise<void> {
+async function writeTextFile(at: string, contents: string): Promise<void> {
+    const container = path.dirname(at);
+    await createFolderIfNotExists(container);
     return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 
