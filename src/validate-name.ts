@@ -15,7 +15,7 @@ export async function validateName(name: string, feedback: Feedback): Promise<bo
         return false;
     }
     await feedback.run(
-        `checking if ${ name } is already taken`,
+        `check availability of package name: ${ name }`,
         () => checkIfNameExists(name)
     );
     return true;

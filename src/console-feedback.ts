@@ -18,5 +18,13 @@ export class ConsoleFeedback implements Feedback {
             throw e;
         }
     }
+
+    log(text: string): void {
+        console.log(text);
+    }
+
+    warn(text: string): void {
+        console.warn(text);
+    }
 }
 

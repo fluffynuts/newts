@@ -30,7 +30,7 @@ describe(`validation`, () => {
             // Arrange
             const options = { name: faker.random.alphaNumeric() };
             // Act
-            const result = sanitizeOptions(options);
+            const result = await sanitizeOptions(options);
             // Assert
             expect(result)
                 .toEqual(

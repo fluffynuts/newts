@@ -4,6 +4,7 @@ import { createReadStream, createWriteStream, promises as fs, StatsBase } from "
 import { spawn } from "./spawn";
 import { NullFeedback } from "./null-feedback";
 import { platform } from "os";
+import chalk from "chalk";
 
 validateNodeVersionAtLeast(10, 12);
 
@@ -11,6 +12,8 @@ let npmPath: string;
 
 export interface Feedback {
     run<T>(label: string, action: AsyncFunc<T>): Promise<T>;
+    log(text: string): void;
+    warn(text: string): void;
 }
 
 export interface BootstrapOptions {
@@ -27,6 +30,10 @@ export interface BootstrapOptions {
     setupBuildScript?: boolean;
     setupPublishScripts?: boolean;
     isCommandline?: boolean;
+    skipReadme?: boolean;
+    license?: string;
+    authorName?: string;
+    authorEmail?: string;
 
     feedback?: Feedback;
     // should only be useful from testing
@@ -51,9 +58,14 @@ interface InternalBootstrapOptions extends BootstrapOptions {
     feedback: Feedback;
 }
 
+const licenseReplacements = {
+    "author": [/\<copyright holder\>/i, /\<copyright holders\>/i],
+    "year": [/\<year\>/i, /\[year\]/i ]
+}
+
 export async function newts(options: BootstrapOptions) {
     await checkNpm();
-    const sanitizedOptions = sanitizeOptions(options);
+    const sanitizedOptions = await sanitizeOptions(options);
     const run = sanitizedOptions.feedback.run.bind(sanitizedOptions.feedback);
 
     await createModuleFolder(sanitizedOptions);
@@ -61,13 +73,26 @@ export async function newts(options: BootstrapOptions) {
         await initGit(sanitizedOptions)
 
         const isNew = await run(
-            `initialise package ${ sanitizedOptions.name }`,
+            `initialise package ${sanitizedOptions.name}`,
             initPackage
         );
 
         await run(`set up package.json defaults`,
             () => setupPackageJsonDefaults(sanitizedOptions, isNew)
         );
+
+        if (!skipLicense(sanitizedOptions.license)) {
+            await run(
+                `install license: ${sanitizedOptions.license}`,
+                () => installLicense(sanitizedOptions)
+            );
+        }
+        await run(
+            `install README.md`,
+            () => createReadme(sanitizedOptions)
+        );
+
+        await setAuthorInfo(sanitizedOptions)
 
         await installPackages(sanitizedOptions)
 
@@ -90,7 +115,89 @@ export async function newts(options: BootstrapOptions) {
             `perform initial build`,
             () => runNpm("run", "build")
         );
+
+
+        printComplete(sanitizedOptions);
     });
+}
+
+async function setAuthorInfo(options: InternalBootstrapOptions) {
+    const authorInfo = {} as Dictionary<string>
+    if (options.authorName) {
+        authorInfo.name = options.authorName
+    }
+    if (options.authorEmail) {
+        authorInfo.email = options.authorEmail;
+    }
+    const keys = Object.keys(authorInfo);
+    if (keys.length === 0) {
+        return;
+    }
+    await options.feedback.run(
+        `set author information`,
+        () => alterPackageJson(pkg => {
+            const result = {...pkg};
+            if (typeof result.author === "string") {
+                result.author = {};
+            }
+            result.author = result.author || {} as Dictionary<string>;
+            keys.forEach(k => (result.author as Dictionary<string>)[k] = authorInfo[k]);
+            return result;
+        })
+    );
+}
+
+function printComplete(options: InternalBootstrapOptions) {
+    options.feedback.log(`--- Congratulations! ---`);
+    options.feedback.log(`${options.name} bootstrapped at ${options.fullPath}`);
+    if (options.license) {
+        options.feedback.warn(
+            chalk.yellow(
+                `Please check ${path.join(options.fullPath, "LICENSE")} for any text you may need to replace`)
+        );
+    }
+}
+
+async function createReadme(options: InternalBootstrapOptions) {
+    if (options.skipReadme) {
+        return;
+    }
+    await writeTextFile("README.md", `# ${options.name}`)
+}
+
+function skipLicense(license: string | undefined) {
+    return !license || [
+        "none",
+        "unlicensed"
+    ].indexOf(license.toLowerCase()) > -1;
+}
+
+async function installLicense(options: InternalBootstrapOptions) {
+    if (!options.license) {
+        return;
+    }
+    const {
+        license,
+        authorName,
+        authorEmail
+    } = options;
+    await copyBundledFile("LICENSE", `licenses/${license}`);
+    if (authorName || authorEmail) {
+        let licenseText = await readTextFile("LICENSE");
+        if (authorName) {
+            licenseReplacements.author.forEach(re => {
+                licenseText = licenseText.replace(re, authorName);
+            });
+            const thisYear = (new Date()).getFullYear().toString();
+            licenseReplacements.year.forEach(re => {
+                licenseText = licenseText.replace(re, thisYear);
+            });
+        }
+        await writeTextFile("LICENSE", licenseText);
+    }
+    await alterPackageJson(pkg => {
+        return {...pkg, license};
+    })
 }
 
 async function seedProjectFiles(options: InternalBootstrapOptions) {
@@ -115,8 +222,8 @@ async function generateTestIndexSpecFile(options: InternalBootstrapOptions) {
     }
     await writeTextFile(
         path.join(options.fullPath, "tests", "index.spec.ts"),
-        `${ headers.join(newline) }
-describe(\`${ options.name }\`, () => {
+        `${headers.join(newline)}
+describe(\`${options.name}\`, () => {
     it(\`should pass the example test\`, async () => {
         // Arrange
         // Act
@@ -135,8 +242,8 @@ async function generateSrcIndexFile(options: InternalBootstrapOptions) {
         : "";
     await writeTextFile(
         path.join(options.fullPath, "src", "index.ts"),
-        `${ header }
-// ${ options.name } module entry point
+        `${header}
+// ${options.name} module entry point
 export function example() {
   console.log("hello, world");
 }
@@ -149,10 +256,19 @@ async function addBinScript(options: InternalBootstrapOptions) {
         return;
     }
 
-    const pkg = await readPackageJson();
-    pkg.bin = pkg.bin || {};
-    pkg.bin[options.name] = "./dist/index.js";
-    await writePackageJson(pkg);
+    await alterPackageJson(pkg => {
+        const result = {...pkg};
+        result.bin = result.bin || {} as Dictionary<string>;
+        result.bin[options.name] = "./dist/index.js";
+        return result;
+    });
+}
+
+async function alterPackageJson(transformer: Func<NpmPackage, NpmPackage>) {
+    const
+        pkg = await readPackageJson(),
+        transformed = transformer(pkg);
+    await writePackageJson(transformed);
 }
 
 async function generateConfigurations(options: InternalBootstrapOptions) {
@@ -173,7 +289,7 @@ export type AsyncFunc<T> = (() => Promise<T>);
 export type AsyncAction = (() => Promise<void>);
 export type Func<Tin, TOut> = ((arg: Tin) => TOut);
 
-export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOptions {
+export async function sanitizeOptions(options: BootstrapOptions): Promise<InternalBootstrapOptions> {
     if (!options) {
         throw new Error("No options provided");
     }
@@ -183,7 +299,7 @@ export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOpt
     if (!options.feedback) {
         options.feedback = new NullFeedback();
     }
-    const result = { ...defaultOptions, ...options } as InternalBootstrapOptions;
+    const result = {...defaultOptions, ...options} as InternalBootstrapOptions;
     if (!result.where) {
         result.where = result.name
         result.fullPath = path.resolve(path.join(process.cwd(), result.where));
@@ -195,6 +311,16 @@ export function sanitizeOptions(options: BootstrapOptions): InternalBootstrapOpt
             result.fullPath = path.join(path.resolve(result.where), result.name)
         }
     }
+    if (result.license) {
+        const
+            selected = result.license ?? "",
+            allLicenses = await fs.readdir("licenses"),
+            match = allLicenses.find(l => l.toLowerCase() === selected.toLowerCase())
+        if (!match) {
+            throw new Error(`license '${selected}' is unknown`);
+        }
+        result.license = match;
+    }
     return result;
 }
 
@@ -202,18 +328,18 @@ async function initGit(options: InternalBootstrapOptions) {
     if (!options.initializeGit) {
         return;
     }
-    await options.feedback.run(`initialise git at ${ options.fullPath }`,
+    await options.feedback.run(`initialise git at ${options.fullPath}`,
         async () => {
             const git = await which("git");
             if (!git) {
                 throw new Error(
-                    `Cannot initialize git in ${ options.fullPath }`
+                    `Cannot initialize git in ${options.fullPath}`
                 );
             }
             try {
                 await spawn(git, ["init"]);
             } catch (e) {
-                throw new Error(`git init fails: ${ e }`);
+                throw new Error(`git init fails: ${e}`);
             }
 
             await setupGitIgnore();
@@ -235,7 +361,7 @@ async function cp(from: string, to: string) {
     return new Promise((_resolve, _reject) => {
         let completed = false;
         const
-            outStream = createWriteStream(to, { flags: "w" }),
+            outStream = createWriteStream(to, {flags: "w"}),
             isComplete = () => {
                 if (completed) {
                     return true;
@@ -285,7 +411,7 @@ async function createFolderIfNotExists(at: string): Promise<void> {
     if (await folderExists(at)) {
         return;
     }
-    await fs.mkdir(at, { recursive: true });
+    await fs.mkdir(at, {recursive: true});
 }
 
 async function runInFolder(
@@ -329,15 +455,17 @@ async function setupPackageJsonDefaults(
     options: InternalBootstrapOptions,
     isNew: boolean
 ) {
-    const pkg = await readPackageJson();
-    if (isNew) {
-        pkg.version = "0.0.1";
-    }
-    pkg.main = "dist/index.js";
-    pkg.files = [
-        "dist/**/*"
-    ];
-    await writePackageJson(pkg);
+    await alterPackageJson(pkg => {
+        const result = {...pkg};
+        if (isNew) {
+            result.version = "0.0.1";
+        }
+        result.main = "dist/index.js";
+        result.files = [
+            "dist/**/*"
+        ];
+        return result;
+    });
 }
 
 async function initPackage(): Promise<boolean> {
@@ -384,7 +512,7 @@ async function installPackages(options: InternalBootstrapOptions) {
     }
     const args = ["install", "--save-dev", "--no-progress"].concat(devDeps);
     await options.feedback.run(
-        `install ${ devDeps.length } packages`,
+        `install ${devDeps.length} packages (this may take a while)`,
         () => runNpm(...args)
     );
 }
@@ -393,10 +521,13 @@ async function generateTsConfig(sanitizedOptions: InternalBootstrapOptions) {
     if (sanitizedOptions.skipTsConfig) {
         return;
     }
-    await runNpm("run", "build", "--", "--init");
     const fname = "tsconfig.json";
+    if (await fileExists(fname)) {
+        await fs.rename(fname, `${fname}.bak`);
+    }
+    await runNpm("run", "build", "--", "--init");
     if (!(await fileExists(fname))) {
-        throw new Error(`tsc --init didn't produce a ${ fname }?`);
+        throw new Error(`tsc --init didn't produce a ${fname}?`);
     }
 
     const lines = await readLines(fname);
@@ -456,7 +587,7 @@ function uncommentDeclaration(line: string): string {
 }
 
 function uncommentLineIfIsForProperty(line: string, prop: string) {
-    return line.match(new RegExp(`^\\s*//\\s"${ prop }"`))
+    return line.match(new RegExp(`^\\s*//\\s"${prop}"`))
         ? line.replace(/\/\//, "")
         : line;
 }
@@ -470,7 +601,7 @@ function setTarget(line: string): string {
 }
 
 function setJsonProp(line: string, prop: string, value: any): string {
-    if (!line.match(new RegExp(`^\\s*"${ prop }"`))) {
+    if (!line.match(new RegExp(`^\\s*"${prop}"`))) {
         return line;
     }
     return replaceNthMatch(line, /("[^"]+")/, 2, JSON.stringify(value));
@@ -485,10 +616,12 @@ async function addBuildNpmScript() {
 }
 
 async function addScript(name: string, script: string) {
-    const pkg = await readPackageJson();
-    pkg.scripts = pkg.scripts || {};
-    pkg.scripts[name] = script;
-    await writePackageJson(pkg);
+    await alterPackageJson(pkg => {
+        const result = {...pkg};
+        result.scripts = result.scripts || {} as Dictionary<string>;
+        result.scripts[name] = script;
+        return result;
+    });
 }
 
 async function addReleaseScript() {
@@ -576,12 +709,12 @@ async function readTextFile(at: string): Promise<string> {
     const fullpath = path.resolve(at);
     for (let i = 0; i < 5; i++) {
         try {
-            return await fs.readFile(fullpath, { encoding: "utf8" });
+            return await fs.readFile(fullpath, {encoding: "utf8"});
         } catch (e) {
             await sleep(100);
         }
     }
-    throw new Error(`can't read file at ${ fullpath }`);
+    throw new Error(`can't read file at ${fullpath}`);
 }
 
 async function readLines(at: string): Promise<string[]> {
@@ -594,10 +727,10 @@ async function writeLines(at: string, lines: string[]): Promise<void> {
     await writeTextFile(at, contents);
 }
 
-async function writeTextFile(at: string, contents: string): Promise<void> {
+export async function writeTextFile(at: string, contents: string): Promise<void> {
     const container = path.dirname(at);
     await createFolderIfNotExists(container);
-    return fs.writeFile(at, contents, { encoding: "utf8" });
+    return fs.writeFile(at, contents, {encoding: "utf8"});
 }
 
 async function readPackageJson(): Promise<NpmPackage> {
@@ -631,7 +764,7 @@ export interface NpmPackage {
     scripts: Dictionary<string>;
     repository: Dictionary<string>;
     keywords: string[];
-    author: Dictionary<string>;
+    author: Dictionary<string> | string;
     license: string;
     devDependencies: Dictionary<string>;
     dependencies: Dictionary<string>;
@@ -659,7 +792,7 @@ function replaceNthMatch(
         // If there was a capture group, index 1 will be
         // an item that matches the RegExp
         if (parts[1].search(pattern) !== 0) {
-            throw { name: "ArgumentError", message: "RegExp must have a capture group" };
+            throw {name: "ArgumentError", message: "RegExp must have a capture group"};
         }
     } else if (pattern.constructor === String) {
         parts = original.split(pattern);
@@ -676,7 +809,7 @@ function replaceNthMatch(
         }
         parts = tempParts;
     } else {
-        throw { name: "ArgumentError", message: "Must provide either a RegExp or String" };
+        throw {name: "ArgumentError", message: "Must provide either a RegExp or String"};
     }
 
     // Parens are unnecessary, but explicit. :)
@@ -688,7 +821,7 @@ function replaceNthMatch(
     }
 
     const replaceWith = typeof (replace) === "function"
-        ? replace(parts[indexOfNthMatch])
+        ? replace(parts[indexOfNthMatch].toString())
         : replace;
 
     // Update our parts array with the new value
