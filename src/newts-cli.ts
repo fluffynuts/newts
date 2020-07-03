@@ -44,7 +44,7 @@ function gatherArgs(
     ).option("install-node-types", flag("install @types/node as a dev-dep")
     ).option("install-jest", flag("install jest and @types/jest")
     ).option("install-extra-matchers", flag("install expect-even-more-jest for more jest matchers")
-    ).option("include-zarro", flag("install zarro: the zero-to-low-conf framework for build, built on gulp (required to set up publish scripts)")
+    ).option("install-zarro", flag("install zarro: the zero-to-low-conf framework for build, built on gulp (required to set up publish scripts)")
     ).option("init-git", flag("initialize git")
     ).option("cli", flag("set up as a CLI script", "c", false)
     ).option("start-script", flag("set up a 'start' npm script against your cli entry point (only applies if --cli specified)")
