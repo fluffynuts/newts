@@ -243,11 +243,14 @@ async function generateCliEntryPoint(options: InternalBootstrapOptions) {
     if (!options.isCommandline) {
         return;
     }
+    const yargsImport = options.includeYargs
+        ? `import yargs = require("yargs");`
+        : ""
     await writeTextFile(
         path.join(options.fullPath, "src", `${options.name}-cli.ts`),
         `#!/usr/bin/env node
 import { example } from "./index";
-import yargs = require("yargs");
+${yargsImport}
 
 (async function main() {
     const args = yargs.argv;

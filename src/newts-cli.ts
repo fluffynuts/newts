@@ -39,13 +39,14 @@ function gatherArgs(
         description: "sets the authorName email for the package.json",
         default: defaultEmail
     }).option("install-faker", flag("install fakerjs for awesome testing")
+    ).option("install-yargs", flag("install yargs (only applies if --cli specified)")
     ).option("install-linter", flag("install a linter")
     ).option("install-node-types", flag("install @types/node as a dev-dep")
     ).option("install-jest", flag("install jest and @types/jest")
     ).option("install-extra-matchers", flag("install expect-even-more-jest for more jest matchers")
     ).option("include-zarro", flag("install zarro: the zero-to-low-conf framework for build, built on gulp (required to set up publish scripts)")
     ).option("init-git", flag("initialize git")
-    ).option("command-line", flag("set up as a CLI script", "c", false)
+    ).option("cli", flag("set up as a CLI script", "c", false)
     ).option("start-script", flag("set up a 'start' npm script against your cli entry point (only applies if --cli specified)")
     ).option("init-readme", flag("generate README.md")
     ).option("install-node-types", flag("install @types/node (recommended)")
@@ -105,7 +106,8 @@ async function queryGitConfig(key: string): Promise<string> {
         initializeGit: argv["init-git"],
         name: argv.name,
         where: argv.output,
-        isCommandline: argv["command-line"],
+        isCommandline: argv.cli,
+        includeYargs: argv["install-yargs"],
         addStartScript: argv["start-script"],
         license: argv.license,
         skipReadme: !argv["init-readme"],
