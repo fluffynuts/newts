@@ -96,7 +96,8 @@ export async function newts(options: BootstrapOptions) {
 
         await setAuthorInfo(sanitizedOptions)
 
-        await installPackages(sanitizedOptions)
+        await installDevPackages(sanitizedOptions)
+        await installReleasePackages(sanitizedOptions)
 
         await run(
             `add npm scripts`,
@@ -247,10 +248,10 @@ async function generateCliEntryPoint(options: InternalBootstrapOptions) {
         ? `import yargs = require("yargs");`
         : ""
     await writeTextFile(
-        path.join(options.fullPath, "src", `${options.name}-cli.ts`),
+        path.join(options.fullPath, "src", `${ options.name }-cli.ts`),
         `#!/usr/bin/env node
 import { example } from "./index";
-${yargsImport}
+${ yargsImport }
 
 (async function main() {
     const args = yargs.argv;
@@ -278,7 +279,7 @@ async function addBinScript(options: InternalBootstrapOptions) {
     await alterPackageJson(pkg => {
         const result = { ...pkg };
         result.bin = result.bin || {} as Dictionary<string>;
-        result.bin[options.name] = `./dist/${options.name}-cli.js`;
+        result.bin[options.name] = `./dist/${ options.name }-cli.js`;
         return result;
     });
 }
@@ -333,7 +334,7 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
     if (result.license) {
         const licenseDir = path.resolve(path.join(__dirname, "..", "licenses"));
         if (!(await folderExists(licenseDir))) {
-            throw new Error(`can't find licenses at: ${licenseDir}`);
+            throw new Error(`can't find licenses at: ${ licenseDir }`);
         }
         const
             selected = result.license ?? "",
@@ -509,7 +510,7 @@ function runNpm(...args: string[]) {
     return spawn(npmPath, args);
 }
 
-const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
+const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     tslint: o => !!o.includeLinter,
     typescript: () => true,
     "@types/node": o => !!o.includeNodeTypes,
@@ -518,34 +519,55 @@ const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     jest: o => !!o.includeJest,
     "ts-jest": o => !!o.includeJest,
     "ts-node": o => !!o.isCommandline && !!o.addStartScript,
-    "yargs": o => !!o.isCommandline && !!o.includeYargs,
-    "@types/yargs": o => !!o.isCommandline && !!o.includeYargs,
     "@types/jest": o => !!o.includeJest,
     "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
     zarro: o => !!o.includeZarro,
     "npm-run-all": () => true,
-    "cross-env": () => true
+    "@types/yargs": o => !!o.isCommandline && !!o.includeYargs,
+    "cross-env": () => true,
 };
 
-async function installPackages(options: InternalBootstrapOptions) {
-    const devDeps = Object.keys(packageMap)
+const releasePackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
+    "yargs": o => !!o.isCommandline && !!o.includeYargs
+};
+
+async function installPackages(
+    isDev: boolean,
+    options: InternalBootstrapOptions,
+    map: Dictionary<Func<InternalBootstrapOptions, boolean>>) {
+    const packages = Object.keys(map)
         .map(k => {
             return {
                 name: k,
-                install: packageMap[k](options)
+                install: map[k](options)
             }
         })
         .filter(o => o.install)
         .map(o => o.name);
 
-    if (devDeps.length === 0) {
+    if (packages.length === 0) {
         return;
     }
-    const args = ["install", "--save-dev", "--no-progress"].concat(devDeps);
+    const args = [
+        "install",
+        isDev ? "--save-dev" : "--save",
+        "--no-progress"
+    ].concat(packages);
+    const
+        s = packages.length === 1 ? "" : "s",
+        label = isDev ? "dev" : "release";
     await options.feedback.run(
-        `install ${ devDeps.length } packages (this may take a while)`,
+        `install ${ packages.length } ${ label } package${ s } (this may take a while)`,
         () => runNpm(...args)
     );
+}
+
+async function installDevPackages(options: InternalBootstrapOptions) {
+    return installPackages(true, options, devPackageMap);
+}
+
+async function installReleasePackages(options: InternalBootstrapOptions) {
+    return installPackages(false, options, releasePackageMap);
 }
 
 async function generateTsConfig(sanitizedOptions: InternalBootstrapOptions) {
@@ -684,7 +706,7 @@ function addZarroNpmScript(): Promise<void> {
 }
 
 function addStartScript(options: InternalBootstrapOptions): Promise<void> {
-    return addScript("start", `ts-node src/${options.name}-cli.ts`);
+    return addScript("start", `ts-node src/${ options.name }-cli.ts`);
 }
 
 async function addNpmScripts(sanitizedOptions: InternalBootstrapOptions) {
