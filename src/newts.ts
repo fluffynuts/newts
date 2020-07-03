@@ -28,8 +28,10 @@ export interface BootstrapOptions {
     initializeGit?: boolean;
     setupTestScript?: boolean;
     setupBuildScript?: boolean;
-    setupPublishScripts?: boolean;
+    setupReleaseScripts?: boolean;
     isCommandline?: boolean;
+    addStartScript?: boolean;
+    includeYargs?: boolean;
     skipReadme?: boolean;
     license?: string;
     authorName?: string;
@@ -49,7 +51,7 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     includeZarro: true,
     setupTestScript: true,
     setupBuildScript: true,
-    setupPublishScripts: true,
+    setupReleaseScripts: true,
     initializeGit: true,
 };
 
@@ -60,7 +62,7 @@ interface InternalBootstrapOptions extends BootstrapOptions {
 
 const licenseReplacements = {
     "author": [/\<copyright holder\>/i, /\<copyright holders\>/i],
-    "year": [/\<year\>/i, /\[year\]/i ]
+    "year": [/\<year\>/i, /\[year\]/i]
 }
 
 export async function newts(options: BootstrapOptions) {
@@ -73,7 +75,7 @@ export async function newts(options: BootstrapOptions) {
         await initGit(sanitizedOptions)
 
         const isNew = await run(
-            `initialise package ${sanitizedOptions.name}`,
+            `initialise package ${ sanitizedOptions.name }`,
             initPackage
         );
 
@@ -83,7 +85,7 @@ export async function newts(options: BootstrapOptions) {
 
         if (!skipLicense(sanitizedOptions.license)) {
             await run(
-                `install license: ${sanitizedOptions.license}`,
+                `install license: ${ sanitizedOptions.license }`,
                 () => installLicense(sanitizedOptions)
             );
         }
@@ -136,7 +138,7 @@ async function setAuthorInfo(options: InternalBootstrapOptions) {
     await options.feedback.run(
         `set author information`,
         () => alterPackageJson(pkg => {
-            const result = {...pkg};
+            const result = { ...pkg };
             if (typeof result.author === "string") {
                 result.author = {};
             }
@@ -149,11 +151,11 @@ async function setAuthorInfo(options: InternalBootstrapOptions) {
 
 function printComplete(options: InternalBootstrapOptions) {
     options.feedback.log(`--- Congratulations! ---`);
-    options.feedback.log(`${options.name} bootstrapped at ${options.fullPath}`);
+    options.feedback.log(`${ options.name } bootstrapped at ${ options.fullPath }`);
     if (options.license) {
         options.feedback.warn(
             chalk.yellow(
-                `Please check ${path.join(options.fullPath, "LICENSE")} for any text you may need to replace`)
+                `Please check ${ path.join(options.fullPath, "LICENSE") } for any text you may need to replace`)
         );
     }
 }
@@ -162,7 +164,7 @@ async function createReadme(options: InternalBootstrapOptions) {
     if (options.skipReadme) {
         return;
     }
-    await writeTextFile("README.md", `# ${options.name}`)
+    await writeTextFile("README.md", `# ${ options.name }`)
 }
 
 function skipLicense(license: string | undefined) {
@@ -181,7 +183,7 @@ async function installLicense(options: InternalBootstrapOptions) {
         authorName,
         authorEmail
     } = options;
-    await copyBundledFile("LICENSE", `licenses/${license}`);
+    await copyBundledFile("LICENSE", `licenses/${ license }`);
     if (authorName || authorEmail) {
         let licenseText = await readTextFile("LICENSE");
         if (authorName) {
@@ -196,12 +198,13 @@ async function installLicense(options: InternalBootstrapOptions) {
         await writeTextFile("LICENSE", licenseText);
     }
     await alterPackageJson(pkg => {
-        return {...pkg, license};
+        return { ...pkg, license };
     })
 }
 
 async function seedProjectFiles(options: InternalBootstrapOptions) {
     await generateSrcIndexFile(options);
+    await generateCliEntryPoint(options);
     await generateTestIndexSpecFile(options);
 }
 
@@ -222,8 +225,8 @@ async function generateTestIndexSpecFile(options: InternalBootstrapOptions) {
     }
     await writeTextFile(
         path.join(options.fullPath, "tests", "index.spec.ts"),
-        `${headers.join(newline)}
-describe(\`${options.name}\`, () => {
+        `${ headers.join(newline) }
+describe(\`${ options.name }\`, () => {
     it(\`should pass the example test\`, async () => {
         // Arrange
         // Act
@@ -236,14 +239,27 @@ describe(\`${options.name}\`, () => {
     );
 }
 
+async function generateCliEntryPoint(options: InternalBootstrapOptions) {
+    if (!options.isCommandline) {
+        return;
+    }
+    await writeTextFile(
+        path.join(options.fullPath, "src", `${options.name}-cli.ts`),
+        `#!/usr/bin/env node
+import { example } from "./index";
+import yargs = require("yargs");
+
+(async function main() {
+    const args = yargs.argv;
+    example();
+})();`
+    )
+}
+
 async function generateSrcIndexFile(options: InternalBootstrapOptions) {
-    const header = options.isCommandline
-        ? `#!/usr/bin/env node`
-        : "";
     await writeTextFile(
         path.join(options.fullPath, "src", "index.ts"),
-        `${header}
-// ${options.name} module entry point
+        `// ${ options.name } module entry point
 export function example() {
   console.log("hello, world");
 }
@@ -257,9 +273,9 @@ async function addBinScript(options: InternalBootstrapOptions) {
     }
 
     await alterPackageJson(pkg => {
-        const result = {...pkg};
+        const result = { ...pkg };
         result.bin = result.bin || {} as Dictionary<string>;
-        result.bin[options.name] = "./dist/index.js";
+        result.bin[options.name] = `./dist/${options.name}-cli.js`;
         return result;
     });
 }
@@ -299,7 +315,7 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
     if (!options.feedback) {
         options.feedback = new NullFeedback();
     }
-    const result = {...defaultOptions, ...options} as InternalBootstrapOptions;
+    const result = { ...defaultOptions, ...options } as InternalBootstrapOptions;
     if (!result.where) {
         result.where = result.name
         result.fullPath = path.resolve(path.join(process.cwd(), result.where));
@@ -317,9 +333,14 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
             allLicenses = await fs.readdir("licenses"),
             match = allLicenses.find(l => l.toLowerCase() === selected.toLowerCase())
         if (!match) {
-            throw new Error(`license '${selected}' is unknown`);
+            throw new Error(`license '${ selected }' is unknown`);
         }
         result.license = match;
+    }
+    if (result.isCommandline &&
+        result.addStartScript === undefined) {
+        // default to add a start script
+        result.addStartScript = true;
     }
     return result;
 }
@@ -328,18 +349,18 @@ async function initGit(options: InternalBootstrapOptions) {
     if (!options.initializeGit) {
         return;
     }
-    await options.feedback.run(`initialise git at ${options.fullPath}`,
+    await options.feedback.run(`initialise git at ${ options.fullPath }`,
         async () => {
             const git = await which("git");
             if (!git) {
                 throw new Error(
-                    `Cannot initialize git in ${options.fullPath}`
+                    `Cannot initialize git in ${ options.fullPath }`
                 );
             }
             try {
                 await spawn(git, ["init"]);
             } catch (e) {
-                throw new Error(`git init fails: ${e}`);
+                throw new Error(`git init fails: ${ e }`);
             }
 
             await setupGitIgnore();
@@ -361,7 +382,7 @@ async function cp(from: string, to: string) {
     return new Promise((_resolve, _reject) => {
         let completed = false;
         const
-            outStream = createWriteStream(to, {flags: "w"}),
+            outStream = createWriteStream(to, { flags: "w" }),
             isComplete = () => {
                 if (completed) {
                     return true;
@@ -411,7 +432,7 @@ async function createFolderIfNotExists(at: string): Promise<void> {
     if (await folderExists(at)) {
         return;
     }
-    await fs.mkdir(at, {recursive: true});
+    await fs.mkdir(at, { recursive: true });
 }
 
 async function runInFolder(
@@ -456,7 +477,7 @@ async function setupPackageJsonDefaults(
     isNew: boolean
 ) {
     await alterPackageJson(pkg => {
-        const result = {...pkg};
+        const result = { ...pkg };
         if (isNew) {
             result.version = "0.0.1";
         }
@@ -489,6 +510,9 @@ const packageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     "@types/faker": o => !!o.includeFaker,
     jest: o => !!o.includeJest,
     "ts-jest": o => !!o.includeJest,
+    "ts-node": o => !!o.isCommandline && !!o.addStartScript,
+    "yargs": o => !!o.isCommandline && !!o.includeYargs,
+    "@types/yargs": o => !!o.isCommandline && !!o.includeYargs,
     "@types/jest": o => !!o.includeJest,
     "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
     zarro: o => !!o.includeZarro,
@@ -512,7 +536,7 @@ async function installPackages(options: InternalBootstrapOptions) {
     }
     const args = ["install", "--save-dev", "--no-progress"].concat(devDeps);
     await options.feedback.run(
-        `install ${devDeps.length} packages (this may take a while)`,
+        `install ${ devDeps.length } packages (this may take a while)`,
         () => runNpm(...args)
     );
 }
@@ -523,11 +547,11 @@ async function generateTsConfig(sanitizedOptions: InternalBootstrapOptions) {
     }
     const fname = "tsconfig.json";
     if (await fileExists(fname)) {
-        await fs.rename(fname, `${fname}.bak`);
+        await fs.rename(fname, `${ fname }.bak`);
     }
     await runNpm("run", "build", "--", "--init");
     if (!(await fileExists(fname))) {
-        throw new Error(`tsc --init didn't produce a ${fname}?`);
+        throw new Error(`tsc --init didn't produce a ${ fname }?`);
     }
 
     const lines = await readLines(fname);
@@ -587,7 +611,7 @@ function uncommentDeclaration(line: string): string {
 }
 
 function uncommentLineIfIsForProperty(line: string, prop: string) {
-    return line.match(new RegExp(`^\\s*//\\s"${prop}"`))
+    return line.match(new RegExp(`^\\s*//\\s"${ prop }"`))
         ? line.replace(/\/\//, "")
         : line;
 }
@@ -601,7 +625,7 @@ function setTarget(line: string): string {
 }
 
 function setJsonProp(line: string, prop: string, value: any): string {
-    if (!line.match(new RegExp(`^\\s*"${prop}"`))) {
+    if (!line.match(new RegExp(`^\\s*"${ prop }"`))) {
         return line;
     }
     return replaceNthMatch(line, /("[^"]+")/, 2, JSON.stringify(value));
@@ -617,7 +641,7 @@ async function addBuildNpmScript() {
 
 async function addScript(name: string, script: string) {
     await alterPackageJson(pkg => {
-        const result = {...pkg};
+        const result = { ...pkg };
         result.scripts = result.scripts || {} as Dictionary<string>;
         result.scripts[name] = script;
         return result;
@@ -648,8 +672,12 @@ function addLintNpmScript() {
     return addScript("lint", "tslint -p .");
 }
 
-function addZarroNpmScript() {
+function addZarroNpmScript(): Promise<void> {
     return addScript("zarro", "zarro");
+}
+
+function addStartScript(options: InternalBootstrapOptions): Promise<void> {
+    return addScript("start", `ts-node src/${options.name}-cli.ts`);
 }
 
 async function addNpmScripts(sanitizedOptions: InternalBootstrapOptions) {
@@ -661,6 +689,9 @@ async function addNpmScripts(sanitizedOptions: InternalBootstrapOptions) {
         await addZarroNpmScript();
         await addReleaseScript();
         await addBetaReleaseScript();
+    }
+    if (sanitizedOptions.isCommandline) {
+        await addStartScript(sanitizedOptions);
     }
 }
 
@@ -709,12 +740,12 @@ async function readTextFile(at: string): Promise<string> {
     const fullpath = path.resolve(at);
     for (let i = 0; i < 5; i++) {
         try {
-            return await fs.readFile(fullpath, {encoding: "utf8"});
+            return await fs.readFile(fullpath, { encoding: "utf8" });
         } catch (e) {
             await sleep(100);
         }
     }
-    throw new Error(`can't read file at ${fullpath}`);
+    throw new Error(`can't read file at ${ fullpath }`);
 }
 
 async function readLines(at: string): Promise<string[]> {
@@ -730,7 +761,7 @@ async function writeLines(at: string, lines: string[]): Promise<void> {
 export async function writeTextFile(at: string, contents: string): Promise<void> {
     const container = path.dirname(at);
     await createFolderIfNotExists(container);
-    return fs.writeFile(at, contents, {encoding: "utf8"});
+    return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 
 async function readPackageJson(): Promise<NpmPackage> {
@@ -792,7 +823,7 @@ function replaceNthMatch(
         // If there was a capture group, index 1 will be
         // an item that matches the RegExp
         if (parts[1].search(pattern) !== 0) {
-            throw {name: "ArgumentError", message: "RegExp must have a capture group"};
+            throw { name: "ArgumentError", message: "RegExp must have a capture group" };
         }
     } else if (pattern.constructor === String) {
         parts = original.split(pattern);
@@ -809,7 +840,7 @@ function replaceNthMatch(
         }
         parts = tempParts;
     } else {
-        throw {name: "ArgumentError", message: "Must provide either a RegExp or String"};
+        throw { name: "ArgumentError", message: "Must provide either a RegExp or String" };
     }
 
     // Parens are unnecessary, but explicit. :)
