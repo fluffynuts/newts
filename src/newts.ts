@@ -331,9 +331,13 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
         }
     }
     if (result.license) {
+        const licenseDir = path.resolve(path.join(__dirname, "..", "licenses"));
+        if (!(await folderExists(licenseDir))) {
+            throw new Error(`can't find licenses at: ${licenseDir}`);
+        }
         const
             selected = result.license ?? "",
-            allLicenses = await fs.readdir("licenses"),
+            allLicenses = await fs.readdir(licenseDir),
             match = allLicenses.find(l => l.toLowerCase() === selected.toLowerCase())
         if (!match) {
             throw new Error(`license '${ selected }' is unknown`);
