@@ -5,8 +5,9 @@ jest.doMock("../../src/spawn", () => spawnModule);
 import { Sandbox } from "filesystem-sandbox";
 import faker from "faker";
 import path from "path";
-import { BootstrapOptions, newts } from "../../src/newts";
+import { newts } from "../../src/newts";
 import { promises } from "fs";
+import { BootstrapOptions } from "../../src/types";
 
 const { readFile } = promises;
 

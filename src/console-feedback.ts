@@ -1,5 +1,5 @@
-import { AsyncFunc, Feedback } from "./newts";
 import chalk from "chalk";
+import { AsyncFunc, Feedback } from "./types";
 
 const
     start = chalk.yellow(`[ WAIT ]`),

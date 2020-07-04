@@ -1,7 +1,7 @@
 import bent from "bent";
 import validate from "validate-npm-package-name";
 import chalk from "chalk";
-import { Dictionary, Feedback } from "./newts";
+import { Feedback, Dictionary } from "./types";
 
 const json = bent("json");
 

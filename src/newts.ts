@@ -1,46 +1,17 @@
 import _which from "which";
 import path from "path";
-import { createReadStream, createWriteStream, promises as fs, StatsBase } from "fs";
+import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { spawn } from "./spawn";
 import { NullFeedback } from "./null-feedback";
 import { platform } from "os";
 import chalk from "chalk";
+import { createFolderIfNotExists, fileExists, folderExists } from "./fs";
+import { NpmPackage, readLines, readPackageJson, writeLines, writePackageJson, readTextFile, writeTextFile } from "./io";
+import { AsyncAction, BootstrapOptions, Dictionary, Feedback, Func } from "./types";
 
 validateNodeVersionAtLeast(10, 12);
 
 let npmPath: string;
-
-export interface Feedback {
-    run<T>(label: string, action: AsyncFunc<T>): Promise<T>;
-    log(text: string): void;
-    warn(text: string): void;
-}
-
-export interface BootstrapOptions {
-    name: string;
-    where?: string;
-    includeLinter?: boolean;
-    includeNodeTypes?: boolean;
-    includeFaker?: boolean;
-    includeJest?: boolean;
-    includeExpectEvenMoreJest?: boolean;
-    includeZarro?: boolean;
-    initializeGit?: boolean;
-    setupTestScript?: boolean;
-    setupBuildScript?: boolean;
-    setupReleaseScripts?: boolean;
-    isCommandline?: boolean;
-    addStartScript?: boolean;
-    includeYargs?: boolean;
-    skipReadme?: boolean;
-    license?: string;
-    authorName?: string;
-    authorEmail?: string;
-
-    feedback?: Feedback;
-    // should only be useful from testing
-    skipTsConfig?: boolean;
-}
 
 export const defaultOptions: Partial<BootstrapOptions> = {
     includeLinter: true,
@@ -305,10 +276,6 @@ async function checkNpm() {
     npmPath = npm;
 }
 
-export type AsyncFunc<T> = (() => Promise<T>);
-export type AsyncAction = (() => Promise<void>);
-export type Func<Tin, TOut> = ((arg: Tin) => TOut);
-
 export async function sanitizeOptions(options: BootstrapOptions): Promise<InternalBootstrapOptions> {
     if (!options) {
         throw new Error("No options provided");
@@ -434,13 +401,6 @@ async function findMyPackageDir() {
 
 function createModuleFolder(options: InternalBootstrapOptions) {
     return createFolderIfNotExists(options.fullPath);
-}
-
-async function createFolderIfNotExists(at: string): Promise<void> {
-    if (await folderExists(at)) {
-        return;
-    }
-    await fs.mkdir(at, { recursive: true });
 }
 
 async function runInFolder(
@@ -740,94 +700,6 @@ function which(program: string): Promise<string | undefined> {
     return new Promise<string>(resolve => {
         _which(program, (err, data) => resolve(err ? undefined : data));
     })
-}
-
-async function fileExists(at: string): Promise<boolean> {
-    return runStat(at, st => st.isFile());
-}
-
-async function folderExists(at: string): Promise<boolean> {
-    return runStat(at, st => st.isDirectory());
-}
-
-async function runStat(at: string, func: Func<StatsBase<any>, boolean>): Promise<boolean> {
-    try {
-        const st = await fs.stat(at);
-        return st && func(st);
-    } catch (e) {
-        return false;
-    }
-}
-
-async function sleep(ms: number): Promise<void> {
-    return new Promise(resolve =>
-        setTimeout(resolve, ms)
-    );
-}
-
-async function readTextFile(at: string): Promise<string> {
-    const fullpath = path.resolve(at);
-    for (let i = 0; i < 5; i++) {
-        try {
-            return await fs.readFile(fullpath, { encoding: "utf8" });
-        } catch (e) {
-            await sleep(100);
-        }
-    }
-    throw new Error(`can't read file at ${ fullpath }`);
-}
-
-async function readLines(at: string): Promise<string[]> {
-    const contents = await readTextFile(at);
-    return (contents || "").split("\n").map(l => l.replace(/\r$/, ""));
-}
-
-async function writeLines(at: string, lines: string[]): Promise<void> {
-    const contents = lines.join("\n");
-    await writeTextFile(at, contents);
-}
-
-export async function writeTextFile(at: string, contents: string): Promise<void> {
-    const container = path.dirname(at);
-    await createFolderIfNotExists(container);
-    return fs.writeFile(at, contents, { encoding: "utf8" });
-}
-
-async function readPackageJson(): Promise<NpmPackage> {
-    return JSON.parse(
-        await readTextFile(
-            "package.json"
-        )
-    );
-}
-
-async function writePackageJson(pkg: NpmPackage): Promise<void> {
-    await writeTextFile(
-        "package.json",
-        JSON.stringify(
-            pkg, null, 2
-        )
-    );
-}
-
-export interface Dictionary<T> {
-    [key: string]: T;
-}
-
-export interface NpmPackage {
-    name: string;
-    version: string;
-    files: string[];
-    bin: Dictionary<string>;
-    description: string;
-    main: string;
-    scripts: Dictionary<string>;
-    repository: Dictionary<string>;
-    keywords: string[];
-    author: Dictionary<string> | string;
-    license: string;
-    devDependencies: Dictionary<string>;
-    dependencies: Dictionary<string>;
 }
 
 // borrowed from https://stackoverflow.com/a/7958627/1697008

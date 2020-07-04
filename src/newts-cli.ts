@@ -1,106 +1,50 @@
 #!/usr/bin/env node
-import yargs = require("yargs");
-import { BootstrapOptions, newts, Dictionary } from "./newts";
+import { newts } from "./newts";
 import { ConsoleFeedback } from "./console-feedback";
 import { validateName } from "./validate-name";
 import chalk from "chalk";
-import { spawn } from "./spawn";
+import { gatherArgs } from "./ux/gather-args";
+import { ask } from "./ux/ask";
+import { generateDefaults, isPartOfGitRepo } from "./ux/cli-options";
+import { BootstrapOptions } from "./types";
 
-function flag(description: string, alias?: string, defaultValue?: boolean) {
-    const result = {
-        description,
-        default: defaultValue ?? true,
-        boolean: true
-    } as Dictionary<any>;
-    if (alias !== undefined) {
-        result.alias = alias;
-    }
-    return result;
-}
-
-function gatherArgs(
-    defaultAuthor: string,
-    defaultEmail: string
-) {
-    return yargs.option("name", {
-        alias: "n",
-        description: "name of the module to create"
-    }).option("output", {
-        alias: "o",
-        description: "where to create this module folder (defaults to the current folder)",
-        default: process.cwd()
-    }).option("license", {
-        description: "select license (provide SPDX identifier, try --help-licenses for a list or 'none' / 'unlicensed' for no license)",
-        default: "BSD-3-Clause", // my preference, for my tool (:
-    }).option("author-name", {
-        description: "sets the authorName name for the package.json",
-        default: defaultAuthor
-    }).option("author-email", {
-        description: "sets the authorName email for the package.json",
-        default: defaultEmail
-    }).option("install-faker", flag("install fakerjs for awesome testing")
-    ).option("install-yargs", flag("install yargs (only applies if --cli specified)")
-    ).option("install-linter", flag("install a linter")
-    ).option("install-node-types", flag("install @types/node as a dev-dep")
-    ).option("install-jest", flag("install jest and @types/jest")
-    ).option("install-extra-matchers", flag("install expect-even-more-jest for more jest matchers")
-    ).option("install-zarro", flag("install zarro: the zero-to-low-conf framework for build, built on gulp (required to set up publish scripts)")
-    ).option("init-git", flag("initialize git")
-    ).option("cli", flag("set up as a CLI script", "c", false)
-    ).option("start-script", flag("set up a 'start' npm script against your cli entry point (only applies if --cli specified)")
-    ).option("init-readme", flag("generate README.md")
-    ).option("install-node-types", flag("install @types/node (recommended)")
-    ).option("build-script", flag("set up a 'build' npm script (recommended)")
-    ).option("release-scripts", flag("set up 'release' and 'release-beta' scripts (only applies if zarro is installed)")
-    ).option("test-script", flag("set up a 'test' script (only applies if jest is installed)")
-    ).argv;
-}
-
-function ask(q: string): Promise<string> {
-    process.stdout.write(`${ q }: `);
-    const readline = require("readline");
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    })
-    return new Promise(resolve => {
-        rl.on("line", (line: string) => {
-            resolve(line.trim());
-        });
-    });
-}
-
-async function queryGitConfig(key: string): Promise<string> {
-    try {
-        const
-            result = await spawn("git", ["config", "--get", key]),
-            allLines = result.stdout.concat(result.stderr)
-                .map(l => (l || "").trim())
-                .filter(l => !!l);
-        // git outputs config info on stderr, which _surely_ is a mistake?
-        // -> just in case, let's take _all_ output and select the first non-empty line
-        return (allLines[0] || "").trim();
-    } catch (e) {
-        return "";
-    }
+function isEmpty(s: string | null | undefined): boolean {
+    return (s || "").trim() === "";
 }
 
 (async () => {
     const
-        author = await queryGitConfig("user.name"),
-        email = await queryGitConfig("user.email"),
-        argv = gatherArgs(author, email);
+        feedback = new ConsoleFeedback(),
+        defaults = await generateDefaults(),
+        argv = gatherArgs(defaults["author-name"], defaults["author-email"]);
 
-    while (!((argv.name as string) || "").trim()) {
-        argv.name = await ask("Please give me a name for this module");
+    if (!(argv.name || "").trim()) {
+        argv.name = await ask(
+            "Please give me a name for this module",
+            s => !isEmpty(s)
+        );
     }
-    const feedback = new ConsoleFeedback();
+    if (!(argv.output || "").trim()) {
+        argv.output = await ask(
+            "Please specify an output folder for this module",
+            async (s) => {
+                if (isEmpty(s)) {
+                    return false;
+                }
+                if (await isPartOfGitRepo(s)) {
+                    feedback.warn("Please select a folder which is not already part of a git repository");
+                    return false;
+                }
+                return true;
+            }
+        );
+    }
 
     const opts = {
         skipTsConfig: false,
         includeZarro: argv["install-zarro"],
         includeLinter: argv["install-linter"],
-        includeExpectEvenMoreJest: argv["install-extra-matchers"],
+        includeExpectEvenMoreJest: argv["install-matchers"],
         includeFaker: argv["install-faker"],
         includeJest: argv["install-jest"],
         initializeGit: argv["init-git"],

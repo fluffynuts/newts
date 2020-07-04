@@ -1,4 +1,4 @@
-import { AsyncFunc, Feedback } from "./newts";
+import { AsyncFunc, Feedback } from "./types";
 
 export class NullFeedback implements Feedback {
     run<T>(label: string, action: AsyncFunc<T>): Promise<T> {

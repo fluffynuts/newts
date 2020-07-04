@@ -16,6 +16,7 @@
     "test": "jest",
     "lint": "tslint -p .",
     "autolint": "nodemon -e ts -x \"run-s lint\"",
+    "autobuild": "nodemon -w src -w tests -e ts -x \"run-s --silent build\"",
     "prebuild": "rimraf dist",
     "build": "tsc",
     "postbuild": "cp .gitignore _gitignore",
