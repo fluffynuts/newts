@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { AsyncFunc, Feedback } from "./types";
+import { AsyncFunc, Feedback } from "../types";
 
 const
     start = chalk.yellow(`[ WAIT ]`),
@@ -25,6 +25,10 @@ export class ConsoleFeedback implements Feedback {
 
     warn(text: string): void {
         console.warn(text);
+    }
+
+    error(text: string): void {
+        console.error(chalk.red(text));
     }
 }
 

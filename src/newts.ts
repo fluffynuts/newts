@@ -2,12 +2,21 @@ import _which from "which";
 import path from "path";
 import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { spawn } from "./spawn";
-import { NullFeedback } from "./null-feedback";
+import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
 import chalk from "chalk";
 import { createFolderIfNotExists, fileExists, folderExists } from "./fs";
-import { NpmPackage, readLines, readPackageJson, writeLines, writePackageJson, readTextFile, writeTextFile } from "./io";
+import {
+    NpmPackage,
+    readLines,
+    readPackageJson,
+    writeLines,
+    writePackageJson,
+    readTextFile,
+    writeTextFile
+} from "./io";
 import { AsyncAction, BootstrapOptions, Dictionary, Feedback, Func } from "./types";
+import { listLicenses } from "./ux/licenses";
 
 validateNodeVersionAtLeast(10, 12);
 
@@ -24,6 +33,9 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     setupBuildScript: true,
     setupReleaseScripts: true,
     initializeGit: true,
+    // TODO: add cli options for these
+    setupGitHubRepo: false,
+    setupGitHubRepoPrivate: false
 };
 
 interface InternalBootstrapOptions extends BootstrapOptions {
@@ -299,13 +311,9 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
         }
     }
     if (result.license) {
-        const licenseDir = path.resolve(path.join(__dirname, "..", "licenses"));
-        if (!(await folderExists(licenseDir))) {
-            throw new Error(`can't find licenses at: ${ licenseDir }`);
-        }
         const
+            allLicenses = await listLicenses(),
             selected = result.license ?? "",
-            allLicenses = await fs.readdir(licenseDir),
             match = allLicenses.find(l => l.toLowerCase() === selected.toLowerCase())
         if (!match) {
             throw new Error(`license '${ selected }' is unknown`);
@@ -340,6 +348,13 @@ async function initGit(options: InternalBootstrapOptions) {
 
             await setupGitIgnore();
         });
+    if (options.setupGitHubRepo) {
+        // TODO
+        // 1. find or download gh
+        // 2. test if repo already exists with module name
+        // 3. if not: gh repo create (may need to handle gh interactive mode)
+        console.error("github setup not yet implemented");
+    }
 }
 
 async function setupGitIgnore() {
@@ -436,7 +451,7 @@ async function generateTsLintConfig(options: InternalBootstrapOptions) {
     }
     await writeTextFile(
         path.join(options.fullPath, "tslint.json"),
-        JSON.stringify(defaultTsLintOptions)
+        JSON.stringify(defaultTsLintOptions, null, 2)
     )
 }
 

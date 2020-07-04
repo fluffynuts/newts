@@ -14,6 +14,7 @@ export async function ask(
         })
         answer = await new Promise(resolve => {
             rl.on("line", (line: string) => {
+                rl.close();
                 resolve(line.trim());
             });
         });

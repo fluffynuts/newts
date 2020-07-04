@@ -1,7 +1,7 @@
-import { writeTextFile } from "./src/newts";
 import { JSDOM } from "jsdom";
-import { ConsoleFeedback } from "./src/console-feedback";
 import { sync as rimraf } from "rimraf";
+import { ConsoleFeedback } from "../src/ux/console-feedback";
+import { writeTextFile } from "../src/io";
 const baseUrl = "https://opensource.org/licenses";
 
 const ignoreLicenses = [

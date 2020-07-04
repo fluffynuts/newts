@@ -2,6 +2,7 @@ export interface Feedback {
     run<T>(label: string, action: AsyncFunc<T>): Promise<T>;
     log(text: string): void;
     warn(text: string): void;
+    error(text: string): void;
 }
 
 export interface Dictionary<T> {
@@ -18,6 +19,8 @@ export interface BootstrapOptions {
     includeExpectEvenMoreJest?: boolean;
     includeZarro?: boolean;
     initializeGit?: boolean;
+    setupGitHubRepo?: boolean;
+    setupGitHubRepoPrivate?: boolean;
     setupTestScript?: boolean;
     setupBuildScript?: boolean;
     setupReleaseScripts?: boolean;

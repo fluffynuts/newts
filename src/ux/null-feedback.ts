@@ -1,4 +1,4 @@
-import { AsyncFunc, Feedback } from "./types";
+import { AsyncFunc, Feedback } from "../types";
 
 export class NullFeedback implements Feedback {
     run<T>(label: string, action: AsyncFunc<T>): Promise<T> {
@@ -10,6 +10,10 @@ export class NullFeedback implements Feedback {
     }
 
     warn(text: string): void {
+        // intentionally left blank
+    }
+
+    error(text: string): void {
         // intentionally left blank
     }
 }

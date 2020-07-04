@@ -22,6 +22,8 @@ export interface CliOptions {
     "build-script"?: boolean;
     "release-scripts"?: boolean;
     "test-script"?: boolean;
+    "list-licenses"?: boolean;
+    "show-license"?: string;
 }
 
 async function suggestDefaultOutput(): Promise<string | undefined> {
