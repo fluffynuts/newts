@@ -25,10 +25,33 @@ export function spawn(
         child.on("close", code => {
             result.code = code;
             return code
-                ? reject(result)
+                ? reject(makeSpawnErrorFor(result, command, args, options))
                 : resolve(result);
         });
     });
+}
+
+function makeSpawnErrorFor(
+    result: ProcessData,
+    command: string,
+    args: string[] | undefined,
+    options: SpawnOptions | undefined
+): SpawnError {
+    const e = new Error(`Error exit code ${result.code} for: ${command} ${(args || []).join(" ")}`);
+    return {
+        ...e,
+        result,
+        command,
+        args,
+        options
+    };
+}
+
+export interface SpawnError extends Error {
+    command: string;
+    args: string[] | undefined;
+    options: SpawnOptions | undefined,
+    result: ProcessData;
 }
 
 export interface ProcessData {

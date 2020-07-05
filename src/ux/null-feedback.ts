@@ -1,8 +1,8 @@
 import { AsyncFunc, Feedback } from "../types";
 
 export class NullFeedback implements Feedback {
-    run<T>(label: string, action: AsyncFunc<T>): Promise<T> {
-        return action();
+    run<T>(label: string, fn: AsyncFunc<T>): Promise<T> {
+        return fn();
     }
 
     log(text: string): void {
@@ -15,6 +15,10 @@ export class NullFeedback implements Feedback {
 
     error(text: string): void {
         // intentionally left blank
+    }
+
+    time<T>(fn: AsyncFunc<T>): Promise<T> {
+        return fn();
     }
 }
 

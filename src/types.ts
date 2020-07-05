@@ -3,6 +3,8 @@ export interface Feedback {
     log(text: string): void;
     warn(text: string): void;
     error(text: string): void;
+
+    time<T>(fn: AsyncFunc<T>): Promise<T>;
 }
 
 export interface Dictionary<T> {
@@ -35,6 +37,7 @@ export interface BootstrapOptions {
     feedback?: Feedback;
     // should only be useful from testing
     skipTsConfig?: boolean;
+    installPackagesOneAtATime?: boolean;
 }
 
 export type AsyncFunc<T> = (() => Promise<T>);

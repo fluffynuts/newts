@@ -1,6 +1,6 @@
 import path from "path";
 import { createReadStream, createWriteStream, promises as fs } from "fs";
-import { spawn } from "./spawn";
+import { spawn, SpawnError } from "./spawn";
 import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
 import chalk from "chalk";
@@ -36,7 +36,9 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     initializeGit: true,
     // TODO: add cli options for these
     setupGitHubRepo: false,
-    setupGitHubRepoPrivate: false
+    setupGitHubRepoPrivate: false,
+
+    installPackagesOneAtATime: false
 };
 
 interface InternalBootstrapOptions extends BootstrapOptions {
@@ -135,7 +137,7 @@ async function setAuthorInfo(options: InternalBootstrapOptions) {
 }
 
 function printComplete(options: InternalBootstrapOptions) {
-    options.feedback.log(`--- Congratulations! ---`);
+    options.feedback.log(`\n--- Congratulations! ---`);
     options.feedback.log(`${ options.name } bootstrapped at ${ options.fullPath }`);
     if (options.license) {
         options.feedback.warn(
@@ -459,20 +461,34 @@ async function initPackage(): Promise<boolean> {
     return true;
 }
 
-function runNpm(...args: string[]) {
-    return spawn(npmPath, args);
+async function runNpm(...args: string[]) {
+    try {
+        await spawn(npmPath, args);
+    } catch (e) {
+        const err = e as SpawnError;
+        if (err.result) {
+            const allOutput = (err.result.stderr || []).concat(
+                err.result.stdout || []
+            );
+            if (allOutput.find(l => l.startsWith("gyp ERR!"))) {
+                // suppress: gyp failed, and it normally doesn't matter
+                return;
+            }
+        }
+        throw e;
+    }
 }
 
 const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
-    tslint: o => !!o.includeLinter,
     typescript: () => true,
+    tslint: o => !!o.includeLinter,
     "@types/node": o => !!o.includeNodeTypes,
     faker: o => !!o.includeFaker,
     "@types/faker": o => !!o.includeFaker,
     jest: o => !!o.includeJest,
+    "@types/jest": o => !!o.includeJest,
     "ts-jest": o => !!o.includeJest,
     "ts-node": o => !!o.isCommandline && !!o.addStartScript,
-    "@types/jest": o => !!o.includeJest,
     "expect-even-more-jest": o => !!o.includeExpectEvenMoreJest,
     zarro: o => !!o.includeZarro,
     "npm-run-all": () => true,
@@ -496,23 +512,33 @@ async function installPackages(
             }
         })
         .filter(o => o.install)
-        .map(o => o.name);
+        .map(o => o.name)
+        .sort();
 
     if (packages.length === 0) {
         return;
     }
-    const args = [
-        "install",
-        isDev ? "--save-dev" : "--save",
-        "--no-progress"
-    ].concat(packages);
+
     const
         s = packages.length === 1 ? "" : "s",
-        label = isDev ? "dev" : "release";
-    await options.feedback.run(
-        `install ${ packages.length } ${ label } package${ s } (this may take a while)`,
-        () => runNpm(...args)
-    );
+        label = isDev ? "dev" : "release",
+        save = isDev ? "--save-dev" : "--save",
+        args = ["install", save, "--no-progress"],
+        operationLabel = `install ${ packages.length } ${ label } package${ s } (may take a minute)`;
+    if (options.installPackagesOneAtATime) {
+        options.feedback.log(operationLabel);
+        for (const pkg of packages) {
+            await options.feedback.run(
+                `  ${ pkg }`,
+                () => runNpm(...args.concat([pkg]))
+            );
+        }
+    } else {
+        await options.feedback.run(
+            operationLabel,
+            () => runNpm(...args.concat(packages))
+        )
+    }
 }
 
 async function installDevPackages(options: InternalBootstrapOptions) {

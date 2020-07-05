@@ -2,32 +2,107 @@ import chalk from "chalk";
 import { AsyncFunc, Feedback } from "../types";
 
 const
-    start = chalk.yellow(`[ WAIT ]`),
     ok = chalk.green(`[  OK  ]`),
-    fail = chalk.red(`[ FAIL ]`);
+    fail = chalk.red(`[ FAIL ]`),
+    spinChars = ["|", "/", "-", "\\"];
+
+function makeSpaces(howMany: number) {
+    const spaces = [];
+    for (let i = 0; i < howMany; i++) {
+        spaces.push(" ");
+    }
+    return spaces.join("");
+}
 
 export class ConsoleFeedback implements Feedback {
-    async run<T>(label: string, action: AsyncFunc<T>): Promise<T> {
+    private spinChar: string = spinChars[0];
+
+    public async run<T>(label: string, action: AsyncFunc<T>): Promise<T> {
+        let timeout;
         try {
-            process.stdout.write(`${start} ${ label }`);
-            const result = await action();
-            console.log(`\r${ok} ${ label }`);
-            return result;
+            return await this.time(async () => {
+                timeout = this.wait(label);
+                const result = await action();
+                this.stopWait(timeout);
+                this.rewrite(label, ok);
+                return result;
+            });
         } catch (e) {
-            console.log(`\r${fail} ${ label }`);
+            if (timeout) {
+                this.stopWait(timeout);
+            }
+            this.rewrite(label, fail);
             throw e;
+        } finally {
+            process.stdout.write("\n");
         }
     }
 
-    log(text: string): void {
+    private _started: number = 0;
+
+    private startTimer() {
+        if (!process.env.TIME_OPERATIONS) {
+            return;
+        }
+        this._started = Date.now();
+    }
+
+    private reportTime() {
+        if (!process.env.TIME_OPERATIONS) {
+            return;
+        }
+        const taken = Date.now() - this._started;
+        process.stdout.write(` (${ (taken / 1000).toFixed(2) }s)`);
+        this._started = 0;
+    }
+
+    async time<T>(fn: AsyncFunc<T>) {
+        this.startTimer();
+        const result = await fn();
+        this.reportTime();
+        return result;
+    }
+
+    private wait(label: string): NodeJS.Timeout {
+        this.spinChar = spinChars[0]
+        return setInterval(() => this.spin(label), 500);
+    }
+
+    private spin(label: string) {
+        this.rewrite(label, `${ this.nextSpinChar() }`, 2);
+    }
+
+    private stopWait(timeout: NodeJS.Timeout) {
+        clearInterval(timeout);
+    }
+
+    private nextSpinChar(): string {
+        const idx = spinChars.indexOf(this.spinChar) + 1;
+        this.spinChar = idx >= spinChars.length
+            ? spinChars[0]
+            : spinChars[idx];
+        return this.spinChar;
+    }
+
+    public rewrite(pre: string, post: string, padSize?: number, cols?: number) {
+        cols = cols ?? 80;
+        padSize = padSize ?? cols - pre.length - post.length;
+        const
+            padding = makeSpaces(padSize),
+            clear = makeSpaces(cols);
+        const finalLine = `\r${ clear }\r${ pre }${ padding }${ post }`;
+        process.stdout.write(finalLine);
+    }
+
+    public log(text: string): void {
         console.log(text);
     }
 
-    warn(text: string): void {
+    public warn(text: string): void {
         console.warn(text);
     }
 
-    error(text: string): void {
+    public error(text: string): void {
         console.error(chalk.red(text));
     }
 }
