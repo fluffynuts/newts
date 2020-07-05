@@ -1,28 +1,28 @@
 import bent from "bent";
 import validate from "validate-npm-package-name";
-import chalk from "chalk";
-import { Feedback, Dictionary } from "./types";
+import { Dictionary } from "./types";
 
 const json = bent("json");
 
-export async function validateName(name: string, feedback: Feedback): Promise<boolean> {
+export async function nameIsValid(
+    name: string
+): Promise<string | boolean> {
     const nameTest = validate(name);
     if (!nameTest.validForNewPackages) {
-        warn(`${ name } is not a valid package name`);
+        const warnings = [
+            `${ name } is not a valid package name`
+        ];
         (nameTest.warnings || []).forEach(warning => {
-            warn(warning);
+            warnings.push(warning);
         });
-        return false;
+        return warnings.join("\n");
     }
-    await feedback.run(
-        `check availability of package name: ${ name }`,
-        () => checkIfNameExists(name)
-    );
-    return true;
-}
-
-function warn(str: string) {
-    console.error(chalk.red(str));
+    try {
+        await checkIfNameExists(name);
+        return true;
+    } catch (e) {
+        return e.message;
+    }
 }
 
 interface StatusError {
@@ -41,5 +41,5 @@ async function checkIfNameExists(name: string): Promise<void> {
         }
         throw e;
     }
-    throw new Error(`package '${ name }' is already registered`);
+    throw new Error(`package '${ name }' is already registered at npmjs.com`);
 }

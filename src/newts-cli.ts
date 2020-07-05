@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { newts } from "./newts";
 import { ConsoleFeedback } from "./ux/console-feedback";
-import { validateName } from "./validate-name";
+import { nameIsValid } from "./name-is-valid";
 import chalk from "chalk";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
@@ -9,6 +9,7 @@ import { applyDefaults, CliOptions, generateDefaults } from "./ux/cli-options";
 import { BootstrapOptions, Feedback } from "./types";
 import { listLicenses, readLicense } from "./ux/licenses";
 import { isPartOfGitRepo } from "./git";
+import { runInteractive } from "./ux/interactive/run-interactive";
 
 function isEmpty(s: string | null | undefined): boolean {
     return (s || "").trim() === "";
@@ -101,6 +102,11 @@ function convertCliOptionsToBootstrapOptions(
     };
 }
 
+function shouldRunInteractive(argv: CliOptions) {
+    return argv.interactive ||
+        argv.name === undefined;
+}
+
 (async () => {
     const
         feedback = new ConsoleFeedback(),
@@ -111,15 +117,27 @@ function convertCliOptionsToBootstrapOptions(
     await printLicenseIfRequired(argv, feedback);
 
     // should check for and perhaps do interactive mode around here
-
-    const consoleOptions = await applyDefaults(argv)
+    let consoleOptions: CliOptions;
+    if (shouldRunInteractive(argv)) {
+        consoleOptions = await runInteractive(argv, defaultOptions);
+        console.log({
+            consoleOptions
+        });
+        process.exit(0);
+    } else {
+        consoleOptions = await applyDefaults(argv)
+    }
     await ensureName(consoleOptions);
     await ensureOutput(consoleOptions, feedback);
 
     const opts = convertCliOptionsToBootstrapOptions(consoleOptions, feedback);
 
     try {
-        await validateName(argv.name as string, feedback);
+        const isValid = await nameIsValid(argv.name as string);
+        if (isValid !== true) {
+            feedback.warn(isValid as string);
+            process.exit(1);
+        }
         await newts(opts);
         process.exit(0);
     } catch (e) {
