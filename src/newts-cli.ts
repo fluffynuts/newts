@@ -5,9 +5,10 @@ import { validateName } from "./validate-name";
 import chalk from "chalk";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
-import { CliOptions, generateDefaults, isPartOfGitRepo } from "./ux/cli-options";
+import { CliOptions, generateDefaults } from "./ux/cli-options";
 import { BootstrapOptions, Feedback } from "./types";
 import { listLicenses, readLicense } from "./ux/licenses";
+import { isPartOfGitRepo } from "./git";
 
 function isEmpty(s: string | null | undefined): boolean {
     return (s || "").trim() === "";

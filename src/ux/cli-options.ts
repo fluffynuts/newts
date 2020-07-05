@@ -1,6 +1,7 @@
 import { queryGitConfig } from "./query-git-config";
 import path from "path";
 import { folderExists } from "../fs";
+import { isPartOfGitRepo } from "../git";
 
 export interface CliOptions {
     name?: string;
@@ -31,22 +32,6 @@ async function suggestDefaultOutput(): Promise<string | undefined> {
     return await isPartOfGitRepo(test)
         ? undefined
         : test
-}
-
-export async function isPartOfGitRepo(folder: string): Promise<boolean> {
-    let current = folder,
-        last = current;
-    do {
-        if (await hasGitFolder(current)) {
-            return true; // require the user to select another location
-        }
-    } while (current !== last);
-    return false;
-}
-
-async function hasGitFolder(at: string): Promise<boolean> {
-    const test = path.join(at, ".git");
-    return folderExists(test);
 }
 
 export async function generateDefaults(): Promise<CliOptions> {

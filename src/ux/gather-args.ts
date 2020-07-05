@@ -22,7 +22,7 @@ export function gatherArgs(
         .option("cli", {
             description: "set up as a CLI script",
             boolean: true,
-            default: defaults["cli"]
+            default: defaults.cli
         })
         .option("init-git", {
             description: "initialize git",
@@ -80,7 +80,7 @@ export function gatherArgs(
         })
         .option("license", {
             description: "select license (provide SPDX identifier, try --list-licenses for a list or 'none' / 'unlicensed' for no license)",
-            default: defaults["license"]
+            default: defaults.license
         })
         .option("name", {
             alias: "n",

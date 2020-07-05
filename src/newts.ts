@@ -1,4 +1,3 @@
-import _which from "which";
 import path from "path";
 import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { spawn } from "./spawn";
@@ -17,6 +16,8 @@ import {
 } from "./io";
 import { AsyncAction, BootstrapOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
+import { init } from "./git";
+import { runInFolder, which } from "./utils";
 
 validateNodeVersionAtLeast(10, 12);
 
@@ -334,18 +335,7 @@ async function initGit(options: InternalBootstrapOptions) {
     }
     await options.feedback.run(`initialise git at ${ options.fullPath }`,
         async () => {
-            const git = await which("git");
-            if (!git) {
-                throw new Error(
-                    `Cannot initialize git in ${ options.fullPath }`
-                );
-            }
-            try {
-                await spawn(git, ["init"]);
-            } catch (e) {
-                throw new Error(`git init fails: ${ e }`);
-            }
-
+            await init(options.fullPath);
             await setupGitIgnore();
         });
     if (options.setupGitHubRepo) {
@@ -416,18 +406,6 @@ async function findMyPackageDir() {
 
 function createModuleFolder(options: InternalBootstrapOptions) {
     return createFolderIfNotExists(options.fullPath);
-}
-
-async function runInFolder(
-    where: string,
-    action: AsyncAction) {
-    const start = process.cwd();
-    try {
-        process.chdir(where);
-        await action();
-    } finally {
-        process.chdir(start);
-    }
 }
 
 const defaultTsLintOptions = {
@@ -709,12 +687,6 @@ function validateNodeVersionAtLeast(requireMajor: number, requireMinor: number) 
             `this library requires at least node 10.12 as it makes use of fs.mkdir with recursive option`
         );
     }
-}
-
-function which(program: string): Promise<string | undefined> {
-    return new Promise<string>(resolve => {
-        _which(program, (err, data) => resolve(err ? undefined : data));
-    })
 }
 
 // borrowed from https://stackoverflow.com/a/7958627/1697008

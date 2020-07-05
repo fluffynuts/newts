@@ -1,10 +1,10 @@
 import { runTsBoot } from "./test-helpers/shared";
 import "expect-even-more-jest";
 import "./test-helpers/matchers";
-import { NpmPackage } from "../src/newts";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
+import { NpmPackage } from "../src/io";
 
 describe(`initialize npm`, () => {
     it(`should npm init when no package.json`, async () => {
