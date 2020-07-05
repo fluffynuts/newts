@@ -142,8 +142,8 @@ function printComplete(options: InternalBootstrapOptions) {
     if (options.license) {
         options.feedback.warn(
             chalk.yellow(
-                `Please check ${ 
-                    path.join(options.fullPath, "LICENSE") 
+                `Please check ${
+                    path.join(options.fullPath, "LICENSE")
                 } for any text you may need to replace, eg author information`)
         );
     }
@@ -529,7 +529,7 @@ async function installPackages(
         timeWarning = packages.length > 3
             ? "(may take a minute)"
             : "",
-        operationLabel = `install ${ packages.length } ${ label } package${ s } ${timeWarning}`;
+        operationLabel = `install ${ packages.length } ${ label } package${ s } ${ timeWarning }`;
     if (options.installPackagesOneAtATime) {
         options.feedback.log(operationLabel);
         for (const pkg of packages) {
