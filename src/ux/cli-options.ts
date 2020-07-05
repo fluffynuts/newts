@@ -1,7 +1,6 @@
 import { queryGitConfig } from "./query-git-config";
-import path from "path";
-import { folderExists } from "../fs";
 import { isPartOfGitRepo } from "../git";
+import { Dictionary } from "../types";
 
 export interface CliOptions {
     name?: string;
@@ -25,7 +24,10 @@ export interface CliOptions {
     "test-script"?: boolean;
     "list-licenses"?: boolean;
     "show-license"?: string;
+    interactive?: boolean;
 }
+
+let defaultOptions: CliOptions;
 
 async function suggestDefaultOutput(): Promise<string | undefined> {
     const test = process.cwd();
@@ -35,7 +37,10 @@ async function suggestDefaultOutput(): Promise<string | undefined> {
 }
 
 export async function generateDefaults(): Promise<CliOptions> {
-    return {
+    if (defaultOptions) {
+        return defaultOptions;
+    }
+    return defaultOptions = {
         name: undefined,
         output: await suggestDefaultOutput(),
         license: "BSD-3-Clause",
@@ -55,5 +60,23 @@ export async function generateDefaults(): Promise<CliOptions> {
         "build-script": true,
         "release-scripts": true,
         "test-script": true,
+        "list-licenses": false,
+        "interactive": false
     };
+}
+
+export async function applyDefaults(
+    options: CliOptions
+): Promise<CliOptions> {
+    const defaults = await generateDefaults();
+    return Object.keys(defaults)
+        .reduce(
+            (acc, cur) => {
+                const k = cur as keyof CliOptions;
+                if (acc[k] === undefined) {
+                    acc[k] = defaults[k];
+                }
+                return acc;
+            }, { ...options } as Dictionary<any>
+        ) as CliOptions;
 }

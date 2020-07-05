@@ -13,6 +13,7 @@
     "licenses/*"
   ],
   "scripts": {
+    "pretest": "run-s lint",
     "test": "jest",
     "lint": "tslint -p .",
     "autolint": "nodemon -e ts -x \"run-s lint\"",
@@ -20,13 +21,14 @@
     "prebuild": "rimraf dist",
     "build": "tsc",
     "postbuild": "cp .gitignore _gitignore",
-    "prerelease-beta": "run-s build lint test",
+    "prerelease-beta": "run-s build test",
     "release-beta": "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"",
     "prerelease": "run-s build lint test",
     "release": "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"",
     "zarro": "zarro",
     "start": "ts-node src/newts-cli.ts",
-    "download-licenses": "ts-node tools/download-licenses.ts"
+    "download-licenses": "ts-node tools/download-licenses.ts",
+    "itest": "run-s \"start -- --cli --name newts-test-cli-integration-test --output /tmp\""
   },
   "repository": {
     "type": "git",

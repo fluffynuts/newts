@@ -4,17 +4,17 @@ import { spawn, SpawnError } from "./spawn";
 import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
 import chalk from "chalk";
-import { createFolderIfNotExists, fileExists, folderExists } from "./fs";
+import { createFolderIfNotExists, fileExists } from "./fs";
 import {
     NpmPackage,
     readLines,
     readPackageJson,
+    readTextFile,
     writeLines,
     writePackageJson,
-    readTextFile,
     writeTextFile
 } from "./io";
-import { AsyncAction, BootstrapOptions, Dictionary, Feedback, Func } from "./types";
+import { BootstrapOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
 import { init } from "./git";
 import { runInFolder, which } from "./utils";
@@ -47,8 +47,8 @@ interface InternalBootstrapOptions extends BootstrapOptions {
 }
 
 const licenseReplacements = {
-    "author": [/\<copyright holder\>/i, /\<copyright holders\>/i],
-    "year": [/\<year\>/i, /\[year\]/i]
+    "author": [/<copyright holder>/i, /<copyright holders>/i],
+    "year": [/<year>/i, /\[year]/i]
 }
 
 export async function newts(options: BootstrapOptions) {
@@ -142,7 +142,9 @@ function printComplete(options: InternalBootstrapOptions) {
     if (options.license) {
         options.feedback.warn(
             chalk.yellow(
-                `Please check ${ path.join(options.fullPath, "LICENSE") } for any text you may need to replace`)
+                `Please check ${ 
+                    path.join(options.fullPath, "LICENSE") 
+                } for any text you may need to replace, eg author information`)
         );
     }
 }
@@ -524,7 +526,10 @@ async function installPackages(
         label = isDev ? "dev" : "release",
         save = isDev ? "--save-dev" : "--save",
         args = ["install", save, "--no-progress"],
-        operationLabel = `install ${ packages.length } ${ label } package${ s } (may take a minute)`;
+        timeWarning = packages.length > 3
+            ? "(may take a minute)"
+            : "",
+        operationLabel = `install ${ packages.length } ${ label } package${ s } ${timeWarning}`;
     if (options.installPackagesOneAtATime) {
         options.feedback.log(operationLabel);
         for (const pkg of packages) {
@@ -765,12 +770,10 @@ function replaceNthMatch(
         return original;
     }
 
-    const replaceWith = typeof (replace) === "function"
+    // Update our parts array with the new value
+    parts[indexOfNthMatch] = typeof (replace) === "function"
         ? replace(parts[indexOfNthMatch].toString())
         : replace;
-
-    // Update our parts array with the new value
-    parts[indexOfNthMatch] = replaceWith;
 
     // Put it back together and return
     return parts.join("");

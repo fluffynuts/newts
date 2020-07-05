@@ -5,7 +5,7 @@ import { validateName } from "./validate-name";
 import chalk from "chalk";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
-import { CliOptions, generateDefaults } from "./ux/cli-options";
+import { applyDefaults, CliOptions, generateDefaults } from "./ux/cli-options";
 import { BootstrapOptions, Feedback } from "./types";
 import { listLicenses, readLicense } from "./ux/licenses";
 import { isPartOfGitRepo } from "./git";
@@ -101,23 +101,22 @@ function convertCliOptionsToBootstrapOptions(
     };
 }
 
-
-
 (async () => {
     const
         feedback = new ConsoleFeedback(),
-        defaults = await generateDefaults(),
-        argv = gatherArgs(defaults);
+        defaultOptions = await generateDefaults(),
+        argv = gatherArgs(defaultOptions);
 
     await printLicensesIfRequired(argv, feedback);
     await printLicenseIfRequired(argv, feedback);
 
     // should check for and perhaps do interactive mode around here
 
-    await ensureName(argv);
-    await ensureOutput(argv, feedback);
+    const consoleOptions = await applyDefaults(argv)
+    await ensureName(consoleOptions);
+    await ensureOutput(consoleOptions, feedback);
 
-    const opts = convertCliOptionsToBootstrapOptions(argv, feedback);
+    const opts = convertCliOptionsToBootstrapOptions(consoleOptions, feedback);
 
     try {
         await validateName(argv.name as string, feedback);
