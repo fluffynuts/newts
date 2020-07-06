@@ -13,8 +13,15 @@ Because I'm making enough of them that:
 
 ## Status
 
-- first pass at something usable
+- try `npx newts --help` for all options
 - easiest use: `npx newts`
+    - will run interactive
+- specify some options and add `--interactive`, 
+    - eg `npx newts --output /path/to/code --name some-module` 
+        - sets output and name, prompts for other config
+- also simple: `npx newts --defaults`
+    - will ask for a project name
+    - may ask for an output folder (if the current one is under git control)
     - will run with defaults:
         - initialize git
             - with relevant .gitignore
@@ -41,8 +48,4 @@ Because I'm making enough of them that:
             - author info (according to git)
             - set up files from dist folder
             - set version to 0.0.1
-    - try `npx newts --help` for all options
 
-## TODO
-I'd really like to add an `--interactive` cli switch to guide the user
-through this.

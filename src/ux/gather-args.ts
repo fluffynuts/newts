@@ -98,5 +98,10 @@ export function gatherArgs(
         .option("test-script", {
             description: "set up a 'test' script (only applies if jest is installed) *",
             boolean: true
+        })
+        .option("defaults", {
+            alias: "d",
+            description: "run with defaults",
+            boolean: true
         }).argv;
 }

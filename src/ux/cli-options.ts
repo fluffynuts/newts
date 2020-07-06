@@ -25,6 +25,7 @@ export interface CliOptions {
     "list-licenses"?: boolean;
     "show-license"?: string;
     interactive?: boolean;
+    defaults?: boolean;
 }
 
 let defaultOptions: CliOptions;
@@ -61,7 +62,8 @@ export async function generateDefaults(): Promise<CliOptions> {
         "release-scripts": true,
         "test-script": true,
         "list-licenses": false,
-        "interactive": false
+        "interactive": false,
+        defaults: false
     };
 }
 

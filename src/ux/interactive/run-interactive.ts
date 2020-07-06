@@ -31,6 +31,7 @@ export async function runInteractive(
         {
             type: "autocomplete",
             name: "value",
+            when: a => !a.license,
             message: q("license"),
             source: async (_: any, input: string) =>
                 input === undefined
@@ -75,7 +76,8 @@ export async function runInteractive(
     }
 
     function notSet(setting: keyof CliOptions): Func<any, boolean> {
-        return a => !currentOptions[setting] && !a[setting];
+        return a => currentOptions[setting] === undefined &&
+            a[setting] === undefined
     }
 
     function yesNo(

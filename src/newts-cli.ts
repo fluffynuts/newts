@@ -112,17 +112,17 @@ function shouldRunInteractive(argv: CliOptions) {
     const
         feedback = new ConsoleFeedback(),
         defaultOptions = await generateDefaults(),
-        argv = gatherArgs(defaultOptions);
-
+        rawArgv = gatherArgs(defaultOptions);
+    const argv = rawArgv.defaults
+        ? await applyDefaults(rawArgv)
+        : rawArgv;
     await printLicensesIfRequired(argv, feedback);
     await printLicenseIfRequired(argv, feedback);
 
-    let consoleOptions: CliOptions;
-    if (shouldRunInteractive(argv)) {
-        consoleOptions = await runInteractive(argv, defaultOptions);
-    } else {
-        consoleOptions = await applyDefaults(argv)
-    }
+    const consoleOptions = shouldRunInteractive(argv)
+        ? await runInteractive(argv, defaultOptions)
+        : argv;
+
     await ensureName(consoleOptions);
     await ensureOutput(consoleOptions, feedback);
 
