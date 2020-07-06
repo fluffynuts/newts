@@ -17,8 +17,8 @@ Because I'm making enough of them that:
 - easiest use: `npx newts`
     - will run interactive
 - specify some options and add `--interactive`, 
-    - eg `npx newts --output /path/to/code --name some-module` 
-        - sets output and name, prompts for other config
+    - eg `npx newts --output /path/to/code --interactive` 
+        - sets output and prompts for other config
 - also simple: `npx newts --defaults`
     - will ask for a project name
     - may ask for an output folder (if the current one is under git control)

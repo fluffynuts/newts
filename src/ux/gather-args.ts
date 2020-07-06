@@ -103,5 +103,10 @@ export function gatherArgs(
             alias: "d",
             description: "run with defaults",
             boolean: true
+        })
+        .option("interactive", {
+            alias: "i",
+            description: "run interactive",
+            boolean: true
         }).argv;
 }
