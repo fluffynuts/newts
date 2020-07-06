@@ -11,7 +11,7 @@ export async function nameIsAvailableAtNpmJs(
         return true;
     } catch (e) {
         if ((e.message || "").indexOf("already registered") > -1) {
-            return false;
+            return e.message;
         }
         throw e;
     }

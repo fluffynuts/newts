@@ -74,6 +74,10 @@ export async function newts(options: BootstrapOptions) {
                 `install license: ${ sanitizedOptions.license }`,
                 () => installLicense(sanitizedOptions)
             );
+        } else {
+            await alterPackageJson(pkg => {
+                return { ...pkg, license: "UNLICENSED" };
+            });
         }
         await run(
             `install README.md`,

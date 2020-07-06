@@ -104,7 +104,8 @@ function convertCliOptionsToBootstrapOptions(
 
 function shouldRunInteractive(argv: CliOptions) {
     return argv.interactive ||
-        argv.name === undefined;
+        argv.name === undefined ||
+        argv.output === undefined;
 }
 
 (async () => {
@@ -116,14 +117,9 @@ function shouldRunInteractive(argv: CliOptions) {
     await printLicensesIfRequired(argv, feedback);
     await printLicenseIfRequired(argv, feedback);
 
-    // should check for and perhaps do interactive mode around here
     let consoleOptions: CliOptions;
     if (shouldRunInteractive(argv)) {
         consoleOptions = await runInteractive(argv, defaultOptions);
-        console.log({
-            consoleOptions
-        });
-        process.exit(0);
     } else {
         consoleOptions = await applyDefaults(argv)
     }
@@ -143,6 +139,7 @@ function shouldRunInteractive(argv: CliOptions) {
     } catch (e) {
         if (typeof e.message === "string") {
             console.error(chalk.red(e.message));
+            console.error(e.stack);
         } else {
             console.error(e);
         }

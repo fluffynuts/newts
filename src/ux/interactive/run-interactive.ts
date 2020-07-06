@@ -1,113 +1,151 @@
 import { CliOptions } from "../cli-options";
-import { Fetcher, HasValue } from "./types";
-import { askForLicense } from "./ask-for-license";
-import { askForName } from "./ask-for-name";
-import { askForOutput } from "./ask-for-output";
-import { askForAuthorName } from "./ask-for-author-name";
-import { askForAuthorEmail } from "./ask-for-author-email";
-import { askYesNo, confirm } from "./ask-yes-no";
 import chalk from "chalk";
 import { nameIsAvailableAtNpmJs } from "./validators/name-is-available-at-npm-js";
 import inquirer from "inquirer";
 import { required } from "./validators/required";
-import { runValidators } from "./run-validators";
+import { runValidators, Validator } from "./run-validators";
 import { isValidPackageName } from "./validators/is-valid-package-name";
-import { isPartOfGitRepo } from "../../git";
+import { isNotInGitRepo } from "./validators/is-not-in-git-repo";
+import { Func } from "../../types";
+import { noneOrValidEmail } from "./validators/none-or-valid-email";
+import { listLicenses } from "../licenses";
 
-export async function runInteractive2(
-    currentOptions: CliOptions,
-    defaultOptions: CliOptions
-): Promise<CliOptions> {
-    const answers = await inquirer.prompt([{
-        name: "name",
-        validate: async (value: string) => {
-            return await runValidators(
-                value,
-                required,
-                isValidPackageName,
-                nameIsAvailableAtNpmJs
-            )
-        }
-    }, {
-        name: "output",
-        when: a => !currentOptions.output && !a.output,
-        validate: async (value: string) => {
-            return await isPartOfGitRepo(value)
-                ? `${value} is part of a git repository - please select another location`
-                : true;
-        }
-    }]);
+inquirer.registerPrompt(
+    "autocomplete",
+    require("inquirer-autocomplete-prompt")
+);
 
-    throw new Error("not yet available");
-}
+type AsyncFunc<TIn, TOut> = (input: TIn) => Promise<TOut>;
 
 export async function runInteractive(
     currentOptions: CliOptions,
     defaultOptions: CliOptions
 ): Promise<CliOptions> {
-    const result = { ...currentOptions } as CliOptions;
-    await fillMissing(result, defaultOptions, "name", askForName);
-    const isAvailable = await nameIsAvailableAtNpmJs(result.name as string);
-    if (!isAvailable) {
-        const useClashingName = (await confirm(
-            chalk.red(`package name ${ result.name } is already reserved at npmjs.com -- use it anyway?`),
-            false
-        )).value;
-        if (!useClashingName) {
-            currentOptions.name = undefined;
-            return runInteractive(currentOptions, defaultOptions)
+    const licenses = await listLicenses();
+    licenses.push("none");
+    const inquirerResult = await inquirer.prompt([
+        prompt("name", required, isValidPackageName, nameIsAvailableAtNpmJs),
+        prompt("output", isNotInGitRepo),
+        prompt("author-name", required),
+        prompt("author-email", noneOrValidEmail),
+        {
+            type: "autocomplete",
+            name: "value",
+            message: q("license"),
+            source: async (_: any, input: string) =>
+                input === undefined
+                    ? [ defaultOptions.license ]
+                    : licenses.filter(l => l.match(new RegExp(input, "i")))
+        },
+        yesNo("cli"),
+        yesNoWhen("install-yargs", a => !!a.cli),
+        yesNo("install-jest"),
+        yesNoWhen("test-script", a => !!a["install-jest"]),
+        yesNoWhen("install-faker", a => !!a["install-jest"]),
+        yesNoWhen("install-matchers", a => !!a["install-jest"]),
+        yesNo("install-linter"),
+        yesNo("init-git"),
+        yesNo("init-readme"),
+        yesNo("build-script"),
+        yesNo("install-zarro"),
+        yesNoWhen("release-scripts", a => !!a["install-zarro"]),
+    ]);
+
+    const result = {
+        ...currentOptions,
+        ...inquirerResult
+    };
+
+    setUndefinedIfIsNone(
+        result,
+        ...noneableOptions
+    );
+
+    const verifyResult = await verifyConfig(result);
+    switch (verifyResult) {
+        case "modify":
+            return runInteractive(currentOptions, {
+                ...defaultOptions,
+                ...result
+            })
+        case "ok":
+            return result;
+        case "quit":
+            process.exit(1);
+    }
+
+    function notSet(setting: keyof CliOptions): Func<any, boolean> {
+        return a => !currentOptions[setting] && !a[setting];
+    }
+
+    function yesNo(
+        name: keyof CliOptions
+    ) {
+        return {
+            name,
+            type: "confirm",
+            default: defaultOptions[name],
+            message: q(name),
+            when: notSet(name)
         }
     }
-    await fillMissing(result, defaultOptions, "output", askForOutput);
-    await fillMissing(result, defaultOptions, "license", askForLicense);
-    await fillMissing(result, defaultOptions, "author-name", askForAuthorName);
-    await fillMissing(result, defaultOptions, "author-email", askForAuthorEmail);
 
-    await fillYesNo("cli", `is ${ result.name } a cli app?`);
-    if (result.cli) {
-        await fillYesNo("install-yargs");
+    function yesNoWhen(
+        name: keyof CliOptions,
+        when: Func<any, boolean> | AsyncFunc<any, boolean>) {
+        return {
+            name,
+            type: "confirm",
+            default: defaultOptions[name],
+            message: q(name),
+            when: async (a: any) => {
+                return await notSet(name)(a) &&
+                    await when(a)
+            }
+        }
     }
 
-    await fillYesNo("install-jest");
-    if (result["install-jest"]) {
-        await fillYesNo("test-script");
-        await fillYesNo("install-faker");
-        await fillYesNo("install-matchers");
+    function prompt<T>(
+        name: keyof CliOptions,
+        ...validators: Validator<T>[]
+    ) {
+        return {
+            name,
+            when: notSet(name),
+            message: q(name),
+            default: defaultOptions[name],
+            validate: async (value: T) => {
+                return await runValidators(
+                    value,
+                    ...validators
+                )
+            }
+        };
     }
+}
 
-    await fillYesNo("install-linter");
-
-    await fillYesNo("init-git");
-    await fillYesNo("init-readme");
-
-    await fillYesNo("build-script");
-    await fillYesNo("install-zarro");
-    if (result["install-zarro"]) {
-        await fillYesNo("release-scripts");
-    }
-
-    // TODO: verify all-good, possibly repeat
-
-    if (await verifyConfig(result)) {
-        return result;
-    }
-    return runInteractive(result, defaultOptions);
-
-    async function fillYesNo(setting: keyof CliOptions, label?: string) {
-        const lbl = label ?? q(setting);
-        return fillMissing(result, defaultOptions, setting,
-            () => askYesNo(lbl, setting, defaultOptions)
-        );
-    }
+function setUndefinedIfIsNone(
+    opts: CliOptions,
+    ...keys: (keyof CliOptions)[]) {
+    keys.forEach(k => {
+        if (opts[k] === "none") {
+            opts[k] = undefined
+        }
+    });
 }
 
 function q(setting: keyof CliOptions): string {
-    return `${ optionLabels[setting] }?`;
+    const hint = noneableOptions.indexOf(setting) > -1
+        ? " (enter 'none' to skip)"
+        : "";
+    return !!optionLabels[setting]
+        ? `${ optionLabels[setting] }${hint} ?`
+        : `[[ ${ setting } ]] ??`;
 }
 
-async function verifyConfig(config: CliOptions): Promise<boolean> {
+async function verifyConfig(config: CliOptions): Promise<"ok" | "modify" | "quit"> {
     const lines = optionOrder.map(o => {
-        if (typeof config[o] === "string") {
+        if (stringOptions.indexOf(o) > -1) {
             return `${ optionLabels[o] }: ${ chalk.yellow(config[o]) }`;
         } else {
             const marker = config[o]
@@ -117,9 +155,17 @@ async function verifyConfig(config: CliOptions): Promise<boolean> {
         }
     });
     lines.forEach(line => console.log(line));
-    return (
-        await confirm("Proceed with the above configuration?", true)
-    ).value;
+    const ans = await inquirer.prompt([{
+        name: "value",
+        message: "Proceed with the above configuration?",
+        type: "list",
+        choices: [
+            "ok",
+            "modify",
+            "quit"
+        ]
+    }]);
+    return ans.value;
 }
 
 type OptionLabels = {
@@ -130,7 +176,7 @@ const optionOrder: (keyof CliOptions)[] = [
     "name",
     "output",
     "author-name",
-    "author-name",
+    "author-email",
     "license",
     "cli",
     "install-yargs",
@@ -144,7 +190,22 @@ const optionOrder: (keyof CliOptions)[] = [
     "release-scripts"
 ];
 
+const stringOptions: (keyof CliOptions)[] = [
+    "name",
+    "output",
+    "author-name",
+    "author-email",
+    "license"
+];
+
+const noneableOptions: (keyof CliOptions)[] = [
+    "author-name",
+    "author-email",
+    "license"
+];
+
 const optionLabels: OptionLabels = {
+    name: "project name",
     output: "create project at",
     "author-name": "author name",
     "author-email": "author email",
@@ -162,15 +223,3 @@ const optionLabels: OptionLabels = {
     "test-script": "setup test script",
     "release-scripts": "setup release scripts",
 };
-
-async function fillMissing<T>(
-    currentOptions: CliOptions,
-    defaultOptions: CliOptions,
-    key: keyof CliOptions,
-    fetcher: Fetcher<HasValue<T>>) {
-    if (currentOptions[key] !== undefined) {
-        return;
-    }
-    const result = await fetcher(defaultOptions);
-    currentOptions[key] = result.value as any;
-}
