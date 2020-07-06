@@ -1,3 +1,5 @@
-export function required(value: string) {
-    return (value || "").trim() !== "";
+export function required(value: string): boolean | string {
+    return (value || "").trim() === ""
+        ? "value is required"
+        : true;
 }

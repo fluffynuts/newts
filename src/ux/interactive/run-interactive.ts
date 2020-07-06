@@ -1,5 +1,4 @@
 import { CliOptions } from "../cli-options";
-import { AsyncFunc } from "../../types";
 import { askLicense } from "./license";
 import { askName } from "./name";
 import { Fetcher, HasValue } from "./types";

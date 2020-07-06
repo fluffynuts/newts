@@ -13,6 +13,6 @@ export async function askLicense(
         message: "Please select a license:",
         choices: await listLicenses(),
         validate: required,
-        default: defaults["license"]
+        default: defaults.license
     })
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { newts } from "./newts";
 import { ConsoleFeedback } from "./ux/console-feedback";
-import { nameIsValid } from "./name-is-valid";
+import { nameIsAvailableAtNpmJs } from "./ux/interactive/validators/name-is-available-at-npm-js";
 import chalk from "chalk";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
@@ -133,7 +133,7 @@ function shouldRunInteractive(argv: CliOptions) {
     const opts = convertCliOptionsToBootstrapOptions(consoleOptions, feedback);
 
     try {
-        const isValid = await nameIsValid(argv.name as string);
+        const isValid = await nameIsAvailableAtNpmJs(argv.name as string);
         if (isValid !== true) {
             feedback.warn(isValid as string);
             process.exit(1);

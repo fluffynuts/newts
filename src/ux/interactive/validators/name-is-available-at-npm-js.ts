@@ -1,22 +1,11 @@
 import bent from "bent";
-import validate from "validate-npm-package-name";
-import { Dictionary } from "./types";
+import { Dictionary } from "../../../types";
 
 const json = bent("json");
 
-export async function nameIsValid(
+export async function nameIsAvailableAtNpmJs(
     name: string
 ): Promise<string | boolean> {
-    const nameTest = validate(name);
-    if (!nameTest.validForNewPackages) {
-        const warnings = [
-            `${ name } is not a valid package name`
-        ];
-        (nameTest.warnings || []).forEach(warning => {
-            warnings.push(warning);
-        });
-        return warnings.join("\n");
-    }
     try {
         await checkIfNameExists(name);
         return true;
