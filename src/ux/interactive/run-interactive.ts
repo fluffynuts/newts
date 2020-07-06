@@ -8,6 +8,38 @@ import { askForAuthorEmail } from "./ask-for-author-email";
 import { askYesNo, confirm } from "./ask-yes-no";
 import chalk from "chalk";
 import { nameIsAvailableAtNpmJs } from "./validators/name-is-available-at-npm-js";
+import inquirer from "inquirer";
+import { required } from "./validators/required";
+import { runValidators } from "./run-validators";
+import { isValidPackageName } from "./validators/is-valid-package-name";
+import { isPartOfGitRepo } from "../../git";
+
+export async function runInteractive2(
+    currentOptions: CliOptions,
+    defaultOptions: CliOptions
+): Promise<CliOptions> {
+    const answers = await inquirer.prompt([{
+        name: "name",
+        validate: async (value: string) => {
+            return await runValidators(
+                value,
+                required,
+                isValidPackageName,
+                nameIsAvailableAtNpmJs
+            )
+        }
+    }, {
+        name: "output",
+        when: a => !currentOptions.output && !a.output,
+        validate: async (value: string) => {
+            return await isPartOfGitRepo(value)
+                ? `${value} is part of a git repository - please select another location`
+                : true;
+        }
+    }]);
+
+    throw new Error("not yet available");
+}
 
 export async function runInteractive(
     currentOptions: CliOptions,
