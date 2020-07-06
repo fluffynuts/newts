@@ -4,7 +4,7 @@ import { required } from "./validators/required";
 import { HasValue } from "./types";
 import { CliOptions } from "../cli-options";
 
-export async function askLicense(
+export async function askForLicense(
     defaults: CliOptions
 ): Promise<HasValue<string>> {
     return inquirer.prompt({

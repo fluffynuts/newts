@@ -134,8 +134,8 @@ function shouldRunInteractive(argv: CliOptions) {
 
     try {
         const isValid = await nameIsAvailableAtNpmJs(argv.name as string);
-        if (isValid !== true) {
-            feedback.warn(isValid as string);
+        if (!isValid) {
+            feedback.warn(`package name ${argv.name} is already reserved at npmjs.com`);
             process.exit(1);
         }
         await newts(opts);

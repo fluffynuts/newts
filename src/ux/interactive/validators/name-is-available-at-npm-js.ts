@@ -1,16 +1,19 @@
 import bent from "bent";
 import { Dictionary } from "../../../types";
 
-const json = bent("json");
+const get = bent("buffer");
 
 export async function nameIsAvailableAtNpmJs(
     name: string
-): Promise<string | boolean> {
+): Promise<boolean> {
     try {
         await checkIfNameExists(name);
         return true;
     } catch (e) {
-        return e.message;
+        if ((e.message || "").indexOf("already registered") > -1) {
+            return false;
+        }
+        throw e;
     }
 }
 
@@ -20,9 +23,10 @@ interface StatusError {
 }
 
 async function checkIfNameExists(name: string): Promise<void> {
-    const url = `https://api.npms.io/v2/package/${ name }`;
+    const url = `https://www.npmjs.com/package/${ name }`;
     try {
-        await json(url);
+        await get(url);
+        throw new Error(`package '${ name }' is already registered at npmjs.com`);
     } catch (e) {
         const err = e as StatusError;
         if (err.statusCode === 404) {
@@ -30,5 +34,4 @@ async function checkIfNameExists(name: string): Promise<void> {
         }
         throw e;
     }
-    throw new Error(`package '${ name }' is already registered at npmjs.com`);
 }
