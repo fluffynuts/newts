@@ -49,3 +49,5 @@ Because I'm making enough of them that:
             - set up files from dist folder
             - set version to 0.0.1
 
+## Show me!
+![interactive demo](newts-interactive.gif)
