@@ -30,7 +30,7 @@ export async function runInteractive(
         prompt("author-email", noneOrValidEmail),
         {
             type: "autocomplete",
-            name: "value",
+            name: "license",
             when: a => !a.license,
             message: q("license"),
             source: async (_: any, input: string) =>
