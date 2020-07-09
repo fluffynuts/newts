@@ -99,6 +99,7 @@ function convertCliOptionsToBootstrapOptions(
         setupBuildScript: argv["build-script"],
         setupReleaseScripts: argv["release-scripts"],
         setupTestScript: argv["test-script"],
+        verifyNameAvailable: argv["verify-name-available"]
     };
 }
 
@@ -129,7 +130,9 @@ function shouldRunInteractive(argv: CliOptions) {
     const opts = convertCliOptionsToBootstrapOptions(consoleOptions, feedback);
 
     try {
-        const isValid = await nameIsAvailableAtNpmJs(argv.name as string);
+        const isValid =
+            !argv["verify-name-available"] ||
+            await nameIsAvailableAtNpmJs(argv.name as string);
         if (!isValid) {
             feedback.warn(`package name ${argv.name} is already reserved at npmjs.com`);
             process.exit(1);

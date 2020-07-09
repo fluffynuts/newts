@@ -25,13 +25,16 @@ interface StatusError {
 async function checkIfNameExists(name: string): Promise<void> {
     const url = `https://www.npmjs.com/package/${ name }`;
     try {
-        await get(url);
+        await get(url)
         throw new Error(`package '${ name }' is already registered at npmjs.com`);
     } catch (e) {
         const err = e as StatusError;
         if (err.statusCode === 404) {
             return;
         }
+        console.log({
+            e
+        });
         throw e;
     }
 }

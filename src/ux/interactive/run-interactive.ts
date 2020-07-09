@@ -24,7 +24,12 @@ export async function runInteractive(
     const licenses = await listLicenses();
     licenses.push("none");
     const inquirerResult = await inquirer.prompt([
-        prompt("name", required, isValidPackageName, nameIsAvailableAtNpmJs),
+        prompt("name", required, isValidPackageName, value => {
+            if (!currentOptions["verify-name-available"]) {
+                return true;
+            }
+            return nameIsAvailableAtNpmJs(value);
+        }),
         prompt("output", isNotInGitRepo),
         prompt("author-name", required),
         prompt("author-email", noneOrValidEmail),

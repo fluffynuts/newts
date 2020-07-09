@@ -38,6 +38,7 @@ export interface BootstrapOptions {
     // should only be useful from testing
     skipTsConfig?: boolean;
     installPackagesOneAtATime?: boolean;
+    verifyNameAvailable?: boolean;
 }
 
 export type AsyncFunc<T> = (() => Promise<T>);

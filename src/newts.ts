@@ -1,6 +1,5 @@
 import path from "path";
 import { createReadStream, createWriteStream, promises as fs } from "fs";
-import { spawn, SpawnError } from "./spawn";
 import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
 import chalk from "chalk";
@@ -17,11 +16,10 @@ import {
 import { BootstrapOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
 import { init } from "./git";
-import { runInFolder, which } from "./utils";
+import { runInFolder } from "./utils";
+import { checkNpm, runNpm } from "./npm";
 
 validateNodeVersionAtLeast(10, 12);
-
-let npmPath: string;
 
 export const defaultOptions: Partial<BootstrapOptions> = {
     includeLinter: true,
@@ -38,7 +36,8 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     setupGitHubRepo: false,
     setupGitHubRepoPrivate: false,
 
-    installPackagesOneAtATime: false
+    installPackagesOneAtATime: false,
+    verifyNameAvailable: true
 };
 
 interface InternalBootstrapOptions extends BootstrapOptions {
@@ -289,14 +288,6 @@ async function generateConfigurations(options: InternalBootstrapOptions) {
     await generateJestConfig();
 }
 
-async function checkNpm() {
-    const npm = await which("npm");
-    if (!npm) {
-        throw new Error("no npm in path?");
-    }
-    npmPath = npm;
-}
-
 export async function sanitizeOptions(options: BootstrapOptions): Promise<InternalBootstrapOptions> {
     if (!options) {
         throw new Error("No options provided");
@@ -465,24 +456,6 @@ async function initPackage(): Promise<boolean> {
     }
     await runNpm("init", "-y")
     return true;
-}
-
-async function runNpm(...args: string[]) {
-    try {
-        await spawn(npmPath, args);
-    } catch (e) {
-        const err = e as SpawnError;
-        if (err.result) {
-            const allOutput = (err.result.stderr || []).concat(
-                err.result.stdout || []
-            );
-            if (allOutput.find(l => l.startsWith("gyp ERR!"))) {
-                // suppress: gyp failed, and it normally doesn't matter
-                return;
-            }
-        }
-        throw e;
-    }
 }
 
 const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {

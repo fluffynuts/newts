@@ -29,6 +29,11 @@ export function gatherArgs(
             description: "set up as a CLI script",
             boolean: true,
         })
+        .option("defaults", {
+            alias: "d",
+            description: "run with defaults",
+            boolean: true
+        })
         .option("init-git", {
             description: "initialize git *",
             boolean: true
@@ -65,6 +70,11 @@ export function gatherArgs(
             description: "install zarro (required to set up publish scripts) *",
             boolean: true
         })
+        .option("interactive", {
+            alias: "i",
+            description: "run interactive",
+            boolean: true
+        })
         .option("list-licenses", {
             description: "show a list of known SPDX license identifiers",
             boolean: true
@@ -99,14 +109,9 @@ export function gatherArgs(
             description: "set up a 'test' script (only applies if jest is installed) *",
             boolean: true
         })
-        .option("defaults", {
-            alias: "d",
-            description: "run with defaults",
+        .option("verify-name-available", {
+            description: "verify that the chosen package name is available at npmjs.com",
             boolean: true
         })
-        .option("interactive", {
-            alias: "i",
-            description: "run interactive",
-            boolean: true
-        }).argv;
+        .argv;
 }
