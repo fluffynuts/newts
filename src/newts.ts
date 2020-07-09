@@ -50,28 +50,28 @@ const licenseReplacements = {
     "year": [/<year>/i, /\[year]/i]
 }
 
-export async function newts(options: BootstrapOptions) {
+export async function newts(rawOptions: BootstrapOptions) {
     await checkNpm();
-    const sanitizedOptions = await sanitizeOptions(options);
-    const run = sanitizedOptions.feedback.run.bind(sanitizedOptions.feedback);
+    const opts = await sanitizeOptions(rawOptions);
+    const run = opts.feedback.run.bind(opts.feedback);
 
-    await createModuleFolder(sanitizedOptions);
-    await runInFolder(sanitizedOptions.fullPath, async () => {
-        await initGit(sanitizedOptions)
+    await createModuleFolder(opts);
+    await runInFolder(opts.fullPath, async () => {
+        await initGit(opts)
 
         const isNew = await run(
-            `initialise package ${ sanitizedOptions.name }`,
-            initPackage
+            `initialise package ${ opts.name }`,
+            () => initPackage(opts)
         );
 
         await run(`set up package.json defaults`,
-            () => setupPackageJsonDefaults(sanitizedOptions, isNew)
+            () => setupPackageJsonDefaults(opts, isNew)
         );
 
-        if (!skipLicense(sanitizedOptions.license)) {
+        if (!skipLicense(opts.license)) {
             await run(
-                `install license: ${ sanitizedOptions.license }`,
-                () => installLicense(sanitizedOptions)
+                `install license: ${ opts.license }`,
+                () => installLicense(opts)
             );
         } else {
             await alterPackageJson(pkg => {
@@ -80,27 +80,27 @@ export async function newts(options: BootstrapOptions) {
         }
         await run(
             `install README.md`,
-            () => createReadme(sanitizedOptions)
+            () => createReadme(opts)
         );
 
-        await setAuthorInfo(sanitizedOptions)
+        await setAuthorInfo(opts)
 
-        await installDevPackages(sanitizedOptions)
-        await installReleasePackages(sanitizedOptions)
+        await installDevPackages(opts)
+        await installReleasePackages(opts)
 
         await run(
             `add npm scripts`,
-            () => addNpmScripts(sanitizedOptions)
+            () => addNpmScripts(opts)
         );
 
         await run(
             `generate configurations`,
-            () => generateConfigurations(sanitizedOptions)
+            () => generateConfigurations(opts)
         );
 
         await run(
             `seed project files`,
-            () => seedProjectFiles(sanitizedOptions)
+            () => seedProjectFiles(opts)
         );
 
         await run(
@@ -109,7 +109,7 @@ export async function newts(options: BootstrapOptions) {
         );
 
 
-        printComplete(sanitizedOptions);
+        printComplete(opts);
     });
 }
 
@@ -288,6 +288,24 @@ async function generateConfigurations(options: InternalBootstrapOptions) {
     await generateJestConfig();
 }
 
+function determineBaseFolderFrom(name: string) {
+    if (name.indexOf("/") === -1) {
+        // simple case: continue
+        return name;
+    }
+    if (name.startsWith("@")) {
+        const parts = name.split("/");
+        return parts.length > 1
+            // possibly namespaced: just use the last part of the full name
+            ? parts[parts.length - 1]
+            // eh, @ is a valid fs name-char
+            : name;
+    } else {
+        // gabba-gabba-hey! make names safe again
+        return name.replace(/\//g, "__");
+    }
+}
+
 export async function sanitizeOptions(options: BootstrapOptions): Promise<InternalBootstrapOptions> {
     if (!options) {
         throw new Error("No options provided");
@@ -300,14 +318,17 @@ export async function sanitizeOptions(options: BootstrapOptions): Promise<Intern
     }
     const result = { ...defaultOptions, ...options } as InternalBootstrapOptions;
     if (!result.where) {
-        result.where = result.name
+        result.where = determineBaseFolderFrom(result.name)
         result.fullPath = path.resolve(path.join(process.cwd(), result.where));
     } else {
         const baseName = path.basename(result.where);
         if (baseName === result.name) {
             result.fullPath = path.resolve(result.where);
         } else {
-            result.fullPath = path.join(path.resolve(result.where), result.name)
+            result.fullPath = path.join(
+                path.resolve(result.where),
+                determineBaseFolderFrom(result.name)
+            )
         }
     }
     if (result.license) {
@@ -449,12 +470,19 @@ async function setupPackageJsonDefaults(
     });
 }
 
-async function initPackage(): Promise<boolean> {
+async function initPackage(opts: InternalBootstrapOptions): Promise<boolean> {
     const alreadyExists = await fileExists("package.json");
     if (alreadyExists) {
         return !alreadyExists;
     }
     await runNpm("init", "-y")
+    // enforce that the correct name was used
+    await alterPackageJson(pkg => {
+        return {
+            ...pkg,
+            name: opts.name
+        };
+    })
     return true;
 }
 

@@ -1,7 +1,7 @@
 import path from "path";
 import { promises as fs } from "fs";
 import { sleep } from "./utils";
-import { createFolderIfNotExists } from "./fs";
+import { createFolderIfNotExists, fileExists } from "./fs";
 import { Dictionary } from "./types";
 
 export async function readTextFile(at: string): Promise<string> {
@@ -32,10 +32,15 @@ export async function writeTextFile(at: string, contents: string): Promise<void>
     return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 
-export async function readPackageJson(): Promise<NpmPackage> {
+export async function readPackageJson(at?: string): Promise<NpmPackage> {
+    const
+        fname = "package.json",
+        pkgPath = !!at
+            ? (await fileExists(at) ? at: path.join(at, fname))
+            : fname;
     return JSON.parse(
         await readTextFile(
-            "package.json"
+            pkgPath
         )
     );
 }

@@ -4,7 +4,7 @@ import "./test-helpers/matchers";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
-import { NpmPackage } from "../src/io";
+import { NpmPackage, readPackageJson } from "../src/io";
 
 describe(`initialize npm`, () => {
     it(`should npm init when no package.json`, async () => {
@@ -25,8 +25,7 @@ describe(`initialize npm`, () => {
         // Assert
         expect(packageJsonFullPath)
             .toBeFile();
-        const pkg = JSON.parse(
-            await sandbox.readTextFile(packageJsonRelative)) as NpmPackage;
+        const pkg = await readPackageJson(sandbox.fullPathFor(name));
         expect(pkg.name)
             .toEqual(name);
         expect(pkg.version)
@@ -35,6 +34,28 @@ describe(`initialize npm`, () => {
             .toEqual("dist/index.js");
         expect(pkg.files)
             .toEqual(["dist/**/*"]);
+    });
+
+    describe(`when package is namespaced`, () => {
+        it(`should init correctly`, async () => {
+            // Arrange
+            const
+                name = "@namespace/package-name",
+                sandbox = await Sandbox.create(),
+                where = sandbox.path,
+                expected = "package-name",
+                packageJsonPath = sandbox.fullPathFor(`${expected}/package.json`);
+            // Act
+            await runTsBoot({ name, where });
+            // Assert
+            expect(path.join(sandbox.fullPathFor(expected)))
+                .toBeFolder();
+            expect(packageJsonPath)
+                .toBeFile();
+            const pkg = await readPackageJson(sandbox.fullPathFor(expected))
+            expect(pkg.name)
+                .toEqual(name);
+        });
     });
 
     it(`should not destroy an existing package.json`, async () => {
