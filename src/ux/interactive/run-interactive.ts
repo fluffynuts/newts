@@ -75,11 +75,7 @@ export async function runInteractive(
     const verifyResult = await verifyConfig(result);
     switch (verifyResult) {
         case "modify":
-            return runInteractive(currentOptions,
-                {
-                    ...defaultOptions,
-                    ...result,
-                }, true)
+            return runInteractive(result, result, true);
         case "ok":
             return result;
         case "quit":
