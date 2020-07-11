@@ -1,6 +1,6 @@
 # NEWTS
 
-`"new ts"`
+literally: `"new ts"`
 
 Bootstraps a TypeScript npm module project
 
