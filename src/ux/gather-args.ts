@@ -105,6 +105,11 @@ export function gatherArgs(
             description: "set up a 'start' npm script against your cli entry point (only applies if --cli specified) *",
             boolean: true
         })
+        .option("test-environment", {
+            description: "set the test environment: either 'jsdom' or 'node'",
+            type: "string",
+            choices: ["jsdom", "node" ]
+        })
         .option("test-script", {
             description: "set up a 'test' script (only applies if jest is installed) *",
             boolean: true

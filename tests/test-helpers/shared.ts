@@ -7,7 +7,7 @@ import faker from "faker";
 import path from "path";
 import { newts } from "../../src/newts";
 import { promises } from "fs";
-import { BootstrapOptions } from "../../src/types";
+import { NewtsOptions } from "../../src/types";
 
 const { readFile } = promises;
 
@@ -86,7 +86,7 @@ export function mockSpawn() {
     }
 }
 
-export function runTsBoot(options: BootstrapOptions) {
+export function runTsBoot(options: NewtsOptions) {
     return newts({
         skipTsConfig: true,
         ...options

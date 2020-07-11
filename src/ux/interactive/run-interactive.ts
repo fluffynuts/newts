@@ -19,33 +19,38 @@ type AsyncFunc<TIn, TOut> = (input: TIn) => Promise<TOut>;
 
 export async function runInteractive(
     currentOptions: CliOptions,
-    defaultOptions: CliOptions
+    defaultOptions: CliOptions,
+    verifying?: boolean
 ): Promise<CliOptions> {
     const licenses = await listLicenses();
     licenses.push("none");
     const inquirerResult = await inquirer.prompt([
-        prompt("name", required, isValidPackageName, value => {
+        prompt("name", undefined, required, isValidPackageName, value => {
             if (!currentOptions["verify-name-available"]) {
                 return true;
             }
             return nameIsAvailableAtNpmJs(value);
         }),
-        prompt("output", isNotInGitRepo),
-        prompt("author-name", required),
-        prompt("author-email", noneOrValidEmail),
+        prompt("output", undefined, isNotInGitRepo),
+        prompt("author-name", notRunningDefaults, required),
+        prompt("author-email", notRunningDefaults, noneOrValidEmail),
         {
             type: "autocomplete",
             name: "license",
-            when: a => !a.license,
+            when: () => {
+                return verifying ||
+                    (!currentOptions.defaults && !currentOptions.license);
+            },
             message: q("license"),
             source: async (_: any, input: string) =>
                 input === undefined
-                    ? [ defaultOptions.license ]
+                    ? [defaultOptions.license]
                     : licenses.filter(l => l.match(new RegExp(input, "i")))
         },
         yesNo("cli"),
         yesNoWhen("install-yargs", a => !!a.cli),
         yesNo("install-jest"),
+        listWhen("test-environment", ["node", "jsdom"], a => !!a["install-jest"]),
         yesNoWhen("test-script", a => !!a["install-jest"]),
         yesNoWhen("install-faker", a => !!a["install-jest"]),
         yesNoWhen("install-matchers", a => !!a["install-jest"]),
@@ -70,14 +75,19 @@ export async function runInteractive(
     const verifyResult = await verifyConfig(result);
     switch (verifyResult) {
         case "modify":
-            return runInteractive(currentOptions, {
-                ...defaultOptions,
-                ...result
-            })
+            return runInteractive(currentOptions,
+                {
+                    ...defaultOptions,
+                    ...result,
+                }, true)
         case "ok":
             return result;
         case "quit":
             process.exit(1);
+    }
+
+    function notRunningDefaults(a: CliOptions) {
+        return !a.defaults;
     }
 
     function notSet(setting: keyof CliOptions): Func<any, boolean> {
@@ -93,7 +103,25 @@ export async function runInteractive(
             type: "confirm",
             default: defaultOptions[name],
             message: q(name),
-            when: notSet(name)
+            when: (a: any) =>
+                verifying ||
+                (notRunningDefaults(a) &&
+                    notSet(name)(a))
+        }
+    }
+
+    function listWhen(
+        name: keyof CliOptions,
+        choices: string[],
+        when: Func<any, boolean> | AsyncFunc<any, boolean>) {
+        return {
+            name,
+            message: q(name),
+            type: "list",
+            choices,
+            when: async (a: any) => {
+                return verifying || await when(a)
+            }
         }
     }
 
@@ -106,7 +134,11 @@ export async function runInteractive(
             default: defaultOptions[name],
             message: q(name),
             when: async (a: any) => {
-                return await notSet(name)(a) &&
+                if (verifying) {
+                    return true;
+                }
+                return notRunningDefaults(a) &&
+                    await notSet(name)(a) &&
                     await when(a)
             }
         }
@@ -114,11 +146,21 @@ export async function runInteractive(
 
     function prompt<T>(
         name: keyof CliOptions,
+        when?: Func<any, boolean> | AsyncFunc<any, boolean>,
         ...validators: Validator<T>[]
     ) {
         return {
             name,
-            when: notSet(name),
+            when: async (values: any) => {
+                if (verifying) {
+                    return true;
+                }
+                if (!when) {
+                    when = () => true;
+                }
+                return await when(values) &&
+                    notSet(name)(values);
+            },
             message: q(name),
             default: defaultOptions[name],
             validate: async (value: T) => {
@@ -146,19 +188,20 @@ function q(setting: keyof CliOptions): string {
         ? " (enter 'none' to skip)"
         : "";
     return !!optionLabels[setting]
-        ? `${ optionLabels[setting] }${hint} ?`
+        ? `${ optionLabels[setting] }${ hint } ?`
         : `[[ ${ setting } ]] ??`;
 }
 
 async function verifyConfig(config: CliOptions): Promise<"ok" | "modify" | "quit"> {
     const lines = optionOrder.map(o => {
+        const label = verifyLabels[o] || optionLabels[o];
         if (stringOptions.indexOf(o) > -1) {
-            return `${ optionLabels[o] }: ${ chalk.yellow(config[o]) }`;
+            return `${ label }: ${ chalk.yellow(config[o]) }`;
         } else {
             const marker = config[o]
                 ? chalk.green("yes")
                 : chalk.red("no");
-            return `${ optionLabels[o] }: ${ marker }`;
+            return `${ label }: ${ marker }`;
         }
     });
     lines.forEach(line => console.log(line));
@@ -188,6 +231,7 @@ const optionOrder: (keyof CliOptions)[] = [
     "cli",
     "install-yargs",
     "install-jest",
+    "test-environment",
     "test-script",
     "install-faker",
     "install-matchers",
@@ -202,7 +246,8 @@ const stringOptions: (keyof CliOptions)[] = [
     "output",
     "author-name",
     "author-email",
-    "license"
+    "license",
+    "test-environment"
 ];
 
 const noneableOptions: (keyof CliOptions)[] = [
@@ -229,4 +274,9 @@ const optionLabels: OptionLabels = {
     "build-script": "setup build script",
     "test-script": "setup test script",
     "release-scripts": "setup release scripts",
+    "test-environment": "test environment (select jsdom for browser-like testing)"
 };
+
+const verifyLabels: OptionLabels = {
+    "test-environment": "test environment"
+}

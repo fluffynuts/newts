@@ -13,7 +13,7 @@ import {
     writePackageJson,
     writeTextFile
 } from "./io";
-import { BootstrapOptions, Dictionary, Feedback, Func } from "./types";
+import { NewtsOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
 import { init } from "./git";
 import { runInFolder } from "./utils";
@@ -21,7 +21,7 @@ import { checkNpm, runNpm } from "./npm";
 
 validateNodeVersionAtLeast(10, 12);
 
-export const defaultOptions: Partial<BootstrapOptions> = {
+export const defaultOptions: Partial<NewtsOptions> = {
     includeLinter: true,
     includeNodeTypes: true,
     includeFaker: true,
@@ -32,6 +32,7 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     setupBuildScript: true,
     setupReleaseScripts: true,
     initializeGit: true,
+    testEnvironment: "node",
     // TODO: add cli options for these
     setupGitHubRepo: false,
     setupGitHubRepoPrivate: false,
@@ -40,7 +41,7 @@ export const defaultOptions: Partial<BootstrapOptions> = {
     verifyNameAvailable: true
 };
 
-interface InternalBootstrapOptions extends BootstrapOptions {
+interface InternalBootstrapOptions extends NewtsOptions {
     fullPath: string;
     feedback: Feedback;
 }
@@ -50,7 +51,7 @@ const licenseReplacements = {
     "year": [/<year>/i, /\[year]/i]
 }
 
-export async function newts(rawOptions: BootstrapOptions) {
+export async function newts(rawOptions: NewtsOptions) {
     await checkNpm();
     const opts = await sanitizeOptions(rawOptions);
     const run = opts.feedback.run.bind(opts.feedback);
@@ -88,6 +89,7 @@ export async function newts(rawOptions: BootstrapOptions) {
         await installDevPackages(opts)
         await installReleasePackages(opts)
 
+        // some npm scripts are required for config generation: particularly the build script (tsc)
         await run(
             `add npm scripts`,
             () => addNpmScripts(opts)
@@ -285,7 +287,7 @@ async function alterPackageJson(transformer: Func<NpmPackage, NpmPackage>) {
 async function generateConfigurations(options: InternalBootstrapOptions) {
     await generateTsLintConfig(options);
     await generateTsConfig(options);
-    await generateJestConfig();
+    await generateJestConfig(options);
 }
 
 function determineBaseFolderFrom(name: string) {
@@ -306,7 +308,7 @@ function determineBaseFolderFrom(name: string) {
     }
 }
 
-export async function sanitizeOptions(options: BootstrapOptions): Promise<InternalBootstrapOptions> {
+export async function sanitizeOptions(options: NewtsOptions): Promise<InternalBootstrapOptions> {
     if (!options) {
         throw new Error("No options provided");
     }
@@ -649,8 +651,25 @@ function setJsonProp(line: string, prop: string, value: any): string {
     return replaceNthMatch(line, /("[^"]+")/, 2, JSON.stringify(value));
 }
 
-async function generateJestConfig() {
-    await copyBundledFile("jest.config.js");
+async function generateJestConfig(options: InternalBootstrapOptions) {
+    const cfg = "jest.config.js";
+    await copyBundledFile(cfg);
+
+    const
+        currentConfig = await readTextFile(cfg),
+        lines = currentConfig.split("\n"),
+        newLines = lines.reduce(
+            (acc, cur) => {
+                const match = cur.match(/(\s*)testEnvironment:/);
+                if (!!match) {
+                    const prefix = match[1];
+                    acc.push(`${prefix}testEnvironment: "${options.testEnvironment}",`);
+                } else {
+                    acc.push(cur);
+                }
+                return acc;
+            }, [] as string[]);
+    await writeLines(cfg, newLines);
 }
 
 async function addBuildNpmScript() {
@@ -718,10 +737,12 @@ function validateNodeVersionAtLeast(requireMajor: number, requireMinor: number) 
         .split(".")
         .map(s => parseInt(s, 10))
         .map(i => isNaN(i) ? 0 : i);
-    if (major < requireMajor || minor < requireMinor) {
-        throw new Error(
-            `this library requires at least node 10.12 as it makes use of fs.mkdir with recursive option`
-        );
+    if (major < requireMajor) {
+        if (minor < requireMinor) {
+            throw new Error(
+                `this library requires at least node 10.12 as it makes use of fs.mkdir with recursive option`
+            );
+        }
     }
 }
 

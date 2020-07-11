@@ -26,6 +26,7 @@ export interface CliOptions {
     "show-license"?: string;
     interactive?: boolean;
     defaults?: boolean;
+    "test-environment"?: string;
     "verify-name-available"?: boolean
 }
 
@@ -65,7 +66,8 @@ export async function generateDefaults(): Promise<CliOptions> {
         "list-licenses": false,
         "interactive": false,
         defaults: false,
-        "verify-name-available": true
+        "verify-name-available": true,
+        "test-environment": "node"
     };
 }
 

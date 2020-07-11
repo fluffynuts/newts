@@ -11,7 +11,7 @@ export interface Dictionary<T> {
     [key: string]: T;
 }
 
-export interface BootstrapOptions {
+export interface NewtsOptions {
     name: string;
     where?: string;
     includeLinter?: boolean;
@@ -33,6 +33,7 @@ export interface BootstrapOptions {
     license?: string;
     authorName?: string;
     authorEmail?: string;
+    testEnvironment?: string;
 
     feedback?: Feedback;
     // should only be useful from testing

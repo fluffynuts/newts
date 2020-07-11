@@ -2,6 +2,7 @@ import { init, mockSpawn, readTextFile, runTsBoot, shared } from "./test-helpers
 import "expect-even-more-jest";
 import "./test-helpers/matchers";
 import { newts } from "../src/newts";
+import { NewtsOptions } from "../src/types";
 
 describe(`newts: baseline configurations`, () => {
     describe(`tslint`, () => {
@@ -135,18 +136,37 @@ describe(`newts: baseline configurations`, () => {
                 .toEqual("ts-jest");
         });
 
-        it(`should set node test environment`, async () => {
-            // Arrange
-            // Act
-            const jestConfig = await bootDefaultJestConfig();
-            // Assert
-            expect(jestConfig.testEnvironment)
-                .toEqual("node");
+        describe(`when testEnvironment is node`, () => {
+            it(`should set node test environment by default`, async () => {
+                // Arrange
+                // Act
+                const jestConfig = await bootDefaultJestConfig();
+                // Assert
+                expect(jestConfig.testEnvironment)
+                    .toEqual("node");
+            });
+
+            it(`should set jsdom test environment on request`, async () => {
+                // Arrange
+                // Act
+                const jestConfig = await bootDefaultJestConfig({
+                    testEnvironment: "jsdom"
+                });
+                // Assert
+                expect(jestConfig.testEnvironment)
+                    .toEqual("jsdom");
+            });
         });
 
-        async function bootDefaultJestConfig() {
+        async function bootDefaultJestConfig(opts?: Partial<NewtsOptions>) {
             const { name, where, jestConfigPath } = await init();
-            await newts({ name, where, skipTsConfig: true });
+            const options = {
+                ...opts,
+                name,
+                where,
+                skipTsConfig: true
+            } as NewtsOptions;
+            await newts(options);
             return require(jestConfigPath);
         }
     });

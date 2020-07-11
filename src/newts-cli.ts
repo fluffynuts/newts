@@ -6,7 +6,7 @@ import chalk from "chalk";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
 import { applyDefaults, CliOptions, generateDefaults } from "./ux/cli-options";
-import { BootstrapOptions, Feedback } from "./types";
+import { NewtsOptions, Feedback } from "./types";
 import { listLicenses, readLicense } from "./ux/licenses";
 import { isPartOfGitRepo } from "./git";
 import { runInteractive } from "./ux/interactive/run-interactive";
@@ -76,7 +76,7 @@ async function ensureOutput(argv: CliOptions, feedback: Feedback) {
 function convertCliOptionsToBootstrapOptions(
     argv: CliOptions,
     feedback: Feedback
-): BootstrapOptions {
+): NewtsOptions {
     return {
         skipTsConfig: false,
         includeZarro: argv["install-zarro"],
@@ -113,14 +113,16 @@ function shouldRunInteractive(argv: CliOptions) {
     const
         feedback = new ConsoleFeedback(),
         defaultOptions = await generateDefaults(),
-        rawArgv = gatherArgs(defaultOptions);
-    const argv = rawArgv.defaults
+        rawArgv = gatherArgs(defaultOptions),
+        interactive = shouldRunInteractive(rawArgv),
+        shouldApplyDefaults = rawArgv.defaults;
+    const argv = shouldApplyDefaults
         ? await applyDefaults(rawArgv)
         : rawArgv;
     await printLicensesIfRequired(argv, feedback);
     await printLicenseIfRequired(argv, feedback);
 
-    const consoleOptions = shouldRunInteractive(argv)
+    const consoleOptions = interactive
         ? await runInteractive(argv, defaultOptions)
         : argv;
 

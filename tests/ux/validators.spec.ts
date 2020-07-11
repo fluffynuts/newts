@@ -130,6 +130,7 @@ describe(`interactive validators`, () => {
     describe(`nameIsAvailableAtNpmJs`, () => {
         it(`should return error for known package`, async () => {
             // Arrange
+            spyOn(console, "log");
             // Act
             const result = await nameIsAvailableAtNpmJs("lodash");
             // Assert
