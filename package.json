@@ -13,7 +13,8 @@
     "licenses/*"
   ],
   "scripts": {
-    "pretest": "run-p lint test-build",
+    "pretest": "run-p lint test-build clear-jest-cache",
+    "clear-jest-cache": "rimraf .jest-cache",
     "test": "jest",
     "lint": "tslint -p .",
     "autolint": "nodemon -e ts -x \"run-s lint\"",
