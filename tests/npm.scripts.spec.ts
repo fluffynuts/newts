@@ -25,6 +25,15 @@ describe(`npm scripts`, () => {
         // Assert
     });
 
+    it(`should add the pretest script`, async () => {
+        // Arrange
+        // Act
+        const result = await bootDefaultPackageJson();
+        // Assert
+        expect(result.scripts.pretest)
+            .toEqual("rimraf .jest-cache");
+    });
+
     it(`should add lint script`, async () => {
         // Arrange
         const result = await bootDefaultPackageJson();

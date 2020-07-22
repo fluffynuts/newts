@@ -503,6 +503,7 @@ const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     "npm-run-all": () => true,
     "@types/yargs": o => !!o.isCommandline && !!o.includeYargs,
     "cross-env": () => true,
+    "rimraf": o => !!o.setupTestScript
 };
 
 const releasePackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
@@ -701,8 +702,9 @@ async function addBetaReleaseScript() {
     );
 }
 
-function addTestNpmScript() {
-    return addScript("test", "jest");
+async function addTestNpmScript() {
+    await addScript("test", "jest");
+    await addScript("pretest", "rimraf .jest-cache");
 }
 
 function addLintNpmScript() {

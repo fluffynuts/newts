@@ -105,3 +105,4 @@ dist
 .idea
 dist
 __sandboxes__
+.jest-cache

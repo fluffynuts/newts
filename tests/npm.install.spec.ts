@@ -154,6 +154,30 @@ describe(`install required packages`, () => {
                 .not.toHaveInstalledDevDependency("expect-even-more-jest");
         });
     });
+    describe(`rimraf`, () => {
+        it(`should install rimraf by default`, async () => {
+            // Arrange
+            const { name, where } = await init();
+            // Act
+            await runTsBoot({
+                name, where
+            })
+            // Assert
+            expect(shared.spawnModule)
+                .toHaveInstalledDevDependency("rimraf");
+        });
+        it(`should skip rimraf when no test script`, async () => {
+            // Arrange
+            const { name, where } = await init();
+            // Act
+            await runTsBoot({
+                name, where, setupTestScript: false
+            })
+            // Assert
+            expect(shared.spawnModule)
+                .not.toHaveInstalledDevDependency("rimraf");
+        });
+    });
 
     describe(`zarro`, () => {
         it(`should install zarro by default`, async () => {
