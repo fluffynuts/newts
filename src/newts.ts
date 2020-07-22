@@ -2,7 +2,7 @@ import path from "path";
 import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
-import chalk from "chalk";
+import chalk from "ansi-colors";
 import { createFolderIfNotExists, fileExists } from "./fs";
 import {
     NpmPackage,

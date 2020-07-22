@@ -1,5 +1,5 @@
 import { CliOptions } from "../cli-options";
-import chalk from "chalk";
+import chalk from "ansi-colors";
 import { nameIsAvailableAtNpmJs } from "./validators/name-is-available-at-npm-js";
 import inquirer from "inquirer";
 import { required } from "./validators/required";
@@ -192,7 +192,7 @@ async function verifyConfig(config: CliOptions): Promise<"ok" | "modify" | "quit
     const lines = optionOrder.map(o => {
         const label = verifyLabels[o] || optionLabels[o];
         if (stringOptions.indexOf(o) > -1) {
-            return `${ label }: ${ chalk.yellow(config[o]) }`;
+            return `${ label }: ${ chalk.yellow(config[o] as string) }`;
         } else {
             const marker = config[o]
                 ? chalk.green("yes")

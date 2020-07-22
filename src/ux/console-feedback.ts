@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import chalk from "ansi-colors";
 import { AsyncFunc, Feedback } from "../types";
 
 const

@@ -41,9 +41,9 @@ async function suggestDefaultOutput(): Promise<string | undefined> {
 
 export async function generateDefaults(): Promise<CliOptions> {
     if (defaultOptions) {
-        return defaultOptions;
+        return { ...defaultOptions };
     }
-    return defaultOptions = {
+    defaultOptions = {
         name: undefined,
         output: await suggestDefaultOutput(),
         license: "BSD-3-Clause",
@@ -69,6 +69,7 @@ export async function generateDefaults(): Promise<CliOptions> {
         "verify-name-available": true,
         "test-environment": "node"
     };
+    return { ...defaultOptions };
 }
 
 export async function applyDefaults(

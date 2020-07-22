@@ -1,4 +1,4 @@
-import { assert, fetchArgs, runAssertions } from "expect-even-more-jest/dist";
+import { assert, fetchSpyOrMockArgs, runAssertions } from "expect-even-more-jest";
 import CustomMatcherResult = jest.CustomMatcherResult;
 import * as path from "path";
 
@@ -7,8 +7,8 @@ expect.extend({
         return runAssertions(this, () => {
             assert(!!actual.spawn, "module is not a spawn module");
             const
-                allArgs = fetchArgs(actual.spawn),
-                cliOfInterest = allArgs.find(args => {
+                allArgs = fetchSpyOrMockArgs(actual.spawn),
+                cliOfInterest = allArgs.find((args: any) => {
                     const
                         basename = path.basename(args[0]),
                         ext = path.extname(basename),

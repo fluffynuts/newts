@@ -78,14 +78,14 @@ describe('cli-options', function () {
                 });
             });
 
-        it(`should cache the result of the first invocation`, async () => {
+        it(`should cache the result of the first invocation, but create a new object`, async () => {
             // Arrange
             // Act
             const r1 = await generateDefaults();
             const r2 = await generateDefaults();
             // Assert
             expect(r1)
-                .toBe(r2);
+                .toEqual(r2);
         });
     });
 });

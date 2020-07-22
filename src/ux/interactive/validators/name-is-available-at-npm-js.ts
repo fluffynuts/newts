@@ -5,7 +5,7 @@ const get = bent("buffer");
 
 export async function nameIsAvailableAtNpmJs(
     name: string
-): Promise<boolean> {
+): Promise<boolean | string> {
     try {
         await checkIfNameExists(name);
         return true;
@@ -32,9 +32,6 @@ async function checkIfNameExists(name: string): Promise<void> {
         if (err.statusCode === 404) {
             return;
         }
-        console.log({
-            e
-        });
         throw e;
     }
 }

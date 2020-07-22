@@ -2,7 +2,7 @@
 import { newts } from "./newts";
 import { ConsoleFeedback } from "./ux/console-feedback";
 import { nameIsAvailableAtNpmJs } from "./ux/interactive/validators/name-is-available-at-npm-js";
-import chalk from "chalk";
+import chalk from "ansi-colors";
 import { gatherArgs } from "./ux/gather-args";
 import { ask } from "./ux/ask";
 import { applyDefaults, CliOptions, generateDefaults } from "./ux/cli-options";
@@ -119,9 +119,18 @@ function shouldRunInteractive(argv: CliOptions) {
     const argv = shouldApplyDefaults
         ? await applyDefaults(rawArgv)
         : rawArgv;
+    if (rawArgv["verify-name-available"] === undefined) {
+        rawArgv["verify-name-available"] = defaultOptions["verify-name-available"];
+    }
     await printLicensesIfRequired(argv, feedback);
     await printLicenseIfRequired(argv, feedback);
 
+    if (argv.name && rawArgv["verify-name-available"]) {
+        if (await nameIsAvailableAtNpmJs(argv.name) !== true) {
+            console.error(`${argv.name} is already reserved at npmjs.com! Please pick another name.`);
+            argv.name = undefined;
+        }
+    }
     const consoleOptions = interactive
         ? await runInteractive(argv, defaultOptions)
         : argv;
