@@ -158,7 +158,7 @@ async function createReadme(options: InternalBootstrapOptions) {
     if (options.skipReadme) {
         return;
     }
-    await writeTextFile("README.md", `# ${ options.name }\n---\n${options.description}`)
+    await writeTextFile("README.md", `${ options.name }\n---\n${options.description}`)
 }
 
 function skipLicense(license: string | undefined) {

@@ -26,7 +26,7 @@ describe(`readme setup`, () => {
             .toBeFile();
         const contents = await readFile(readmeFullPath, { encoding: "utf8" });
         expect(contents)
-            .toStartWith(`# ${name}`);
+            .toStartWith(`${name}`);
     });
     it(`should include the description in the readme`, async () => {
         // Arrange
