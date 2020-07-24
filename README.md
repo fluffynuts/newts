@@ -1,4 +1,7 @@
 # NEWTS
+![Build and Test](https://github.com/fluffynuts/synchronous-promise/newts/Tests/badge.svg)
+
+![npm](https://img.shields.io/npm/v/newts)
 
 literally: `"new ts"`
 
