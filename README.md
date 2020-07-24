@@ -57,3 +57,8 @@ pre-formatted files -- it:
 
 ## Show me!
 ![interactive demo](newts-interactive.gif)
+
+## TODO
+- create a target repo at GitHub on request
+- add a GitHub workflow to automatically test when you push
+- ??? make a request on the [Issues Page](https://github.com/fluffynuts/newts/issues)
