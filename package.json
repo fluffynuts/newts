@@ -1,6 +1,6 @@
 {
   "name": "newts",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Generator to kickstart TypeScript modules for easy publishing to NPMJS",
   "main": "dist/newts.js",
   "bin": {
