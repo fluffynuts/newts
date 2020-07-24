@@ -1,5 +1,5 @@
 # NEWTS
-![Tests](https://github.com/fluffynuts/newts/Tests/badge.svg)
+![Tests](https://github.com/fluffynuts/newts/workflows/Tests/badge.svg)
 
 ![npm](https://img.shields.io/npm/v/newts)
 
