@@ -73,7 +73,7 @@ async function ensureOutput(argv: CliOptions, feedback: Feedback) {
     }
 }
 
-function convertCliOptionsToBootstrapOptions(
+export function convertCliOptionsToBootstrapOptions(
     argv: CliOptions,
     feedback: Feedback
 ): NewtsOptions {
@@ -86,6 +86,7 @@ function convertCliOptionsToBootstrapOptions(
         includeJest: argv["install-jest"],
         initializeGit: argv["init-git"],
         name: argv.name || "",
+        description: argv.description,
         where: argv.output,
         isCommandline: argv.cli,
         includeYargs: argv["install-yargs"],
@@ -103,13 +104,17 @@ function convertCliOptionsToBootstrapOptions(
     };
 }
 
-function shouldRunInteractive(argv: CliOptions) {
+export function shouldRunInteractive(argv: CliOptions) {
     return argv.interactive ||
-        argv.name === undefined ||
-        argv.output === undefined;
+        !(argv.name || "").trim() ||
+        !(argv.output || "").trim();
 }
 
 (async () => {
+    if (!!global.jasmine) {
+        // running in a test due to an import
+        return;
+    }
     const
         feedback = new ConsoleFeedback(),
         defaultOptions = await generateDefaults(),

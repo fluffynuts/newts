@@ -13,6 +13,7 @@ export interface Dictionary<T> {
 
 export interface NewtsOptions {
     name: string;
+    description?: string;
     where?: string;
     includeLinter?: boolean;
     includeNodeTypes?: boolean;

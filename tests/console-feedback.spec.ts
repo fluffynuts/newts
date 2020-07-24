@@ -1,8 +1,8 @@
 import "expect-even-more-jest";
 import { ConsoleFeedback } from "../src/ux/console-feedback";
 
-describe('console-feedback', function () {
-    describe('rewrite', function () {
+describe("console-feedback", () => {
+    describe("rewrite", () => {
         it(`should rewrite the line`, async () => {
             // Arrange
             spyOn(process.stdout, "write");

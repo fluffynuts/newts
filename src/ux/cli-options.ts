@@ -4,6 +4,7 @@ import { Dictionary } from "../types";
 
 export interface CliOptions {
     name?: string;
+    description?: string;
     output?: string;
     license?: string;
     "author-name"?: string;
@@ -45,6 +46,7 @@ export async function generateDefaults(): Promise<CliOptions> {
     }
     defaultOptions = {
         name: undefined,
+        description: undefined,
         output: await suggestDefaultOutput(),
         license: "BSD-3-Clause",
         "author-name": await queryGitConfig("user.name"),

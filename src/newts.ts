@@ -158,7 +158,7 @@ async function createReadme(options: InternalBootstrapOptions) {
     if (options.skipReadme) {
         return;
     }
-    await writeTextFile("README.md", `# ${ options.name }`)
+    await writeTextFile("README.md", `# ${ options.name }\n---\n${options.description}`)
 }
 
 function skipLicense(license: string | undefined) {
@@ -482,7 +482,8 @@ async function initPackage(opts: InternalBootstrapOptions): Promise<boolean> {
     await alterPackageJson(pkg => {
         return {
             ...pkg,
-            name: opts.name
+            name: opts.name,
+            description: opts.description ?? ""
         };
     })
     return true;

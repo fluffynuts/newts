@@ -10,8 +10,8 @@ jest.doMock("../../src/ux/query-git-config", () => fakeQueryGitConfig);
 import { applyDefaults, CliOptions, generateDefaults } from "../../src/ux/cli-options";
 import { Dictionary } from "../../src/types";
 
-describe('cli-options', function () {
-    describe('applyDefaults', function () {
+describe(`cli-options`, () => {
+    describe(`applyDefaults`, () => {
         it(`should fill in undefined option with default`, async () => {
             // Arrange
             const
@@ -45,7 +45,7 @@ describe('cli-options', function () {
         });
     });
 
-    describe('generateDefaults', function () {
+    describe(`generateDefaults`, () => {
         const testCases = {
             license: "BSD-3-Clause",
             "install-faker": true,

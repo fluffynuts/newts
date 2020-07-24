@@ -31,6 +31,7 @@ export async function runInteractive(
             }
             return nameIsAvailableAtNpmJs(value);
         }),
+        prompt("description", undefined),
         prompt("output", undefined, isNotInGitRepo),
         prompt("author-name", notRunningDefaults, required),
         prompt("author-email", notRunningDefaults, noneOrValidEmail),
@@ -220,6 +221,7 @@ type OptionLabels = {
 
 const optionOrder: (keyof CliOptions)[] = [
     "name",
+    "description",
     "output",
     "author-name",
     "author-email",
@@ -254,6 +256,7 @@ const noneableOptions: (keyof CliOptions)[] = [
 
 const optionLabels: OptionLabels = {
     name: "project name",
+    description: "project description (optional)",
     output: "create project at",
     "author-name": "author name",
     "author-email": "author email",

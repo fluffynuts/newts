@@ -34,6 +34,10 @@ export function gatherArgs(
             description: "run with defaults",
             boolean: true
         })
+        .option("description", {
+            description: "description for the project, added to package.json and the generated README.md",
+            type: "string"
+        })
         .option("init-git", {
             description: "initialize git *",
             boolean: true

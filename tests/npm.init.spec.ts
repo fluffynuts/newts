@@ -4,13 +4,14 @@ import "./test-helpers/matchers";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";
-import { NpmPackage, readPackageJson } from "../src/io";
+import { readPackageJson } from "../src/io";
 
 describe(`initialize npm`, () => {
     it(`should npm init when no package.json`, async () => {
         // Arrange
         const
             name = faker.random.alphaNumeric(5),
+            description = faker.random.words(10),
             sandbox = await Sandbox.create(),
             where = sandbox.path,
             packageJsonRelative = path.join(name, "package.json"),
@@ -20,6 +21,7 @@ describe(`initialize npm`, () => {
         // Act
         await runTsBoot({
             name,
+            description,
             where
         });
         // Assert
@@ -28,6 +30,8 @@ describe(`initialize npm`, () => {
         const pkg = await readPackageJson(sandbox.fullPathFor(name));
         expect(pkg.name)
             .toEqual(name);
+        expect(pkg.description)
+            .toEqual(description);
         expect(pkg.version)
             .toEqual("0.0.1");
         expect(pkg.main)
