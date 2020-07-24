@@ -10,6 +10,12 @@ Because I'm making enough of them that:
 1. I see a pattern
 2. I'm tired of manually repeating that pattern
 
+## Why not just a yeoman (or other) generator?
+I wanted full control over the pipeline and `newts` doesn't _just_ dump out some
+pre-formatted files -- it:
+- gives you some choices (eg licensing)
+- verifies that the new project name you chose is available at npmjs.com
+- actually runs `npm install` and `git init` (where appropriate)
 
 ## Status
 

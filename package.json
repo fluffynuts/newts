@@ -23,14 +23,15 @@
     "prebuild": "rimraf dist",
     "build": "tsc",
     "postbuild": "cp .gitignore _gitignore",
-    "prerelease-beta": "run-s build test",
+    "prerelease-beta": "run-s build test verify-up-to-date",
     "release-beta": "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"",
-    "prerelease": "run-s build test",
+    "prerelease": "run-s build test verify-up-to-date",
     "release": "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"",
     "zarro": "zarro",
     "start": "ts-node src/newts-cli.ts",
     "download-licenses": "ts-node tools/download-licenses.ts",
-    "itest": "run-s \"start -- --cli --name newts-test-cli-integration-test --output /tmp\""
+    "itest": "run-s \"start -- --cli --name newts-test-cli-integration-test --output /tmp\"",
+    "verify-up-to-date": "zarro verify-up-to-date"
   },
   "repository": {
     "type": "git",
@@ -74,7 +75,7 @@
     "tslint": "^6.1.2",
     "typescript": "^3.9.3",
     "yafs": "^1.3.0",
-    "zarro": "^1.55.0"
+    "zarro": "^1.71.0"
   },
   "dependencies": {
     "ansi-colors": "^4.1.1",
