@@ -200,11 +200,19 @@ async function seedProjectFiles(options: InternalBootstrapOptions) {
     await generateSrcIndexFile(options);
     await generateCliEntryPoint(options);
     await generateTestIndexSpecFile(options);
+    await generateTestSetupFile(options);
 }
 
 const newline = platform() === "win32"
     ? "\r\n"
     : "\n";
+
+async function generateTestSetupFile(options: InternalBootstrapOptions) {
+    await writeTextFile(
+        path.join(options.fullPath, "tests", "setup.ts"),
+        "// include any test setup here"
+    )
+}
 
 async function generateTestIndexSpecFile(options: InternalBootstrapOptions) {
     if (!options.includeJest) {
