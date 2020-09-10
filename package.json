@@ -1,6 +1,6 @@
 {
   "name": "newts",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "Generator to kickstart TypeScript modules for easy publishing to NPMJS",
   "main": "dist/newts.js",
   "bin": {
@@ -75,7 +75,7 @@
     "tslint": "^6.1.2",
     "typescript": "^3.9.3",
     "yafs": "^1.3.0",
-    "zarro": "^1.71.0"
+    "zarro": "^1.78.0"
   },
   "dependencies": {
     "ansi-colors": "^4.1.1",
