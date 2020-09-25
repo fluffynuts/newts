@@ -1,20 +1,7 @@
 import path from "path";
 import { promises as fs } from "fs";
-import { sleep } from "./utils";
-import { createFolderIfNotExists, fileExists } from "./fs";
+import { mkdir, fileExists, readTextFile } from "yafs";
 import { Dictionary } from "./types";
-
-export async function readTextFile(at: string): Promise<string> {
-    const fullpath = path.resolve(at);
-    for (let i = 0; i < 5; i++) {
-        try {
-            return await fs.readFile(fullpath, { encoding: "utf8" });
-        } catch (e) {
-            await sleep(100);
-        }
-    }
-    throw new Error(`can't read file at ${ fullpath }`);
-}
 
 export async function readLines(at: string): Promise<string[]> {
     const contents = await readTextFile(at);
@@ -28,7 +15,7 @@ export async function writeLines(at: string, lines: string[]): Promise<void> {
 
 export async function writeTextFile(at: string, contents: string): Promise<void> {
     const container = path.dirname(at);
-    await createFolderIfNotExists(container);
+    await mkdir(container);
     return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 

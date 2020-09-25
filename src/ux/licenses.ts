@@ -1,8 +1,7 @@
 import { promises } from "fs";
 const { readdir } = promises;
 import path from "path";
-import { folderExists } from "../fs";
-import { readTextFile } from "../io";
+import { folderExists, readTextFile } from "yafs";
 
 const licenseDir = path.resolve(path.join(__dirname, "..", "..", "licenses"));
 

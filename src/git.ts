@@ -1,5 +1,5 @@
 import path from "path";
-import { folderExists } from "./fs";
+import { folderExists } from "yafs";
 import { spawn } from "./spawn";
 import { runInFolder, which } from "./utils";
 

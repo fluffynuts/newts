@@ -86,13 +86,13 @@ describe(`initialize npm`, () => {
                 .toEqual("export * from \"./dist\";");
         });
 
-        it(`should generate the main.ts`, async () => {
+        it(`should generate the main file based on the package name`, async () => {
             // Arrange
             const
                 name = faker.random.alphaNumeric(5),
                 description = faker.random.words(10),
                 sandbox = await Sandbox.create(),
-                relPath = path.join(name, "src", "main.ts"),
+                relPath = path.join(name, "src", `${name}.ts`),
                 where = sandbox.path,
                 expected = sandbox.fullPathFor(relPath);
             // Act

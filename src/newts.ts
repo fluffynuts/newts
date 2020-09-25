@@ -3,16 +3,16 @@ import { createReadStream, createWriteStream, promises as fs } from "fs";
 import { NullFeedback } from "./ux/null-feedback";
 import { platform } from "os";
 import chalk from "ansi-colors";
-import { createFolderIfNotExists, fileExists } from "./fs";
+import { mkdir, fileExists } from "yafs";
 import {
     NpmPackage,
     readLines,
     readPackageJson,
-    readTextFile,
     writeLines,
     writePackageJson,
     writeTextFile
 } from "./io";
+import { readTextFile } from "yafs";
 import { NewtsOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
 import { init } from "./git";
@@ -266,7 +266,7 @@ ${ yargsImport }
 
 async function generateSrcMainFile(options: InternalBootstrapOptions) {
     await writeTextFile(
-        path.join(options.fullPath, "src", "main.ts"),
+        path.join(options.fullPath, "src", `${options.name}.ts`),
         `// ${ options.name } module main file
 export function example() {
   console.log("hello, world");
@@ -460,7 +460,7 @@ async function findMyPackageDir() {
 }
 
 function createModuleFolder(options: InternalBootstrapOptions) {
-    return createFolderIfNotExists(options.fullPath);
+    return mkdir(options.fullPath);
 }
 
 const defaultTsLintOptions = {
