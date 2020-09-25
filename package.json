@@ -84,7 +84,7 @@
     "inquirer-autocomplete-prompt": "^1.0.2",
     "validate-npm-package-name": "^3.0.0",
     "which": "^2.0.2",
-    "yafs": "^1.6.0",
+    "yafs": "^1.7.0",
     "yargs": "^15.3.1"
   }
 }
