@@ -158,7 +158,7 @@ async function createReadme(options: InternalBootstrapOptions) {
     if (options.skipReadme) {
         return;
     }
-    await writeTextFile("README.md", `${ options.name }\n---\n${options.description}`)
+    await writeTextFile("README.md", `${ options.name }\n---\n${ options.description }`)
 }
 
 function skipLicense(license: string | undefined) {
@@ -197,7 +197,10 @@ async function installLicense(options: InternalBootstrapOptions) {
 }
 
 async function seedProjectFiles(options: InternalBootstrapOptions) {
+    await generateSrcMainFile(options);
     await generateSrcIndexFile(options);
+    await generateModuleIndexFile(options);
+    await generateModuleIndexTypingsFile(options);
     await generateCliEntryPoint(options);
     await generateTestIndexSpecFile(options);
     await generateTestSetupFile(options);
@@ -261,15 +264,37 @@ ${ yargsImport }
     )
 }
 
-async function generateSrcIndexFile(options: InternalBootstrapOptions) {
+async function generateSrcMainFile(options: InternalBootstrapOptions) {
     await writeTextFile(
-        path.join(options.fullPath, "src", "index.ts"),
-        `// ${ options.name } module entry point
+        path.join(options.fullPath, "src", "main.ts"),
+        `// ${ options.name } module main file
 export function example() {
   console.log("hello, world");
 }
 `);
     await addBinScript(options);
+}
+
+async function generateSrcIndexFile(options: InternalBootstrapOptions) {
+    await writeTextFile(
+        path.join(options.fullPath, "src", "index.ts"),
+        `// this is a generated file: do not edit
+export * from "./main";
+`);
+}
+
+async function generateModuleIndexFile(options: InternalBootstrapOptions) {
+    await writeTextFile(
+        path.join(options.fullPath, "index.js"),
+        `module.exports = require("./dist");`
+    );
+}
+
+async function generateModuleIndexTypingsFile(options: InternalBootstrapOptions) {
+    await writeTextFile(
+        path.join(options.fullPath, "index.d.ts"),
+        `export * from "./dist";`
+    )
 }
 
 async function addBinScript(options: InternalBootstrapOptions) {
@@ -472,9 +497,11 @@ async function setupPackageJsonDefaults(
         if (isNew) {
             result.version = "0.0.1";
         }
-        result.main = "dist/index.js";
+        result.main = "index.js";
         result.files = [
-            "dist/**/*"
+            "dist/**/*",
+            "index.js",
+            "index.d.ts"
         ];
         return result;
     });
@@ -673,7 +700,7 @@ async function generateJestConfig(options: InternalBootstrapOptions) {
                 const match = cur.match(/(\s*)testEnvironment:/);
                 if (!!match) {
                     const prefix = match[1];
-                    acc.push(`${prefix}testEnvironment: "${options.testEnvironment}",`);
+                    acc.push(`${ prefix }testEnvironment: "${ options.testEnvironment }",`);
                 } else {
                     acc.push(cur);
                 }

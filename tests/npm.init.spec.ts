@@ -35,9 +35,105 @@ describe(`initialize npm`, () => {
         expect(pkg.version)
             .toEqual("0.0.1");
         expect(pkg.main)
-            .toEqual("dist/index.js");
+            .toEqual("index.js");
         expect(pkg.files)
-            .toEqual(["dist/**/*"]);
+            .toEqual(["dist/**/*", "index.js", "index.d.ts"]);
+    });
+
+    describe(`initial artifacts`, () => {
+        it(`should generate the base index.js`, async () => {
+            // Arrange
+            const
+                name = faker.random.alphaNumeric(5),
+                description = faker.random.words(10),
+                sandbox = await Sandbox.create(),
+                where = sandbox.path,
+                relPath = path.join(name, "index.js"),
+                expected = sandbox.fullPathFor(relPath);
+            // Act
+            await runTsBoot({
+                name,
+                description,
+                where
+            });
+            // Assert
+            expect(expected)
+                .toBeFile();
+            const contents = await sandbox.readTextFile(relPath);
+            expect(contents)
+                .toEqual("module.exports = require(\"./dist\");");
+        });
+        it(`should generate the base index.d.ts`, async () => {
+            // Arrange
+            const
+                name = faker.random.alphaNumeric(5),
+                description = faker.random.words(10),
+                sandbox = await Sandbox.create(),
+                where = sandbox.path,
+                relPath = path.join(name, "index.d.ts"),
+                expected = sandbox.fullPathFor(relPath);
+            // Act
+            await runTsBoot({
+                name,
+                description,
+                where
+            });
+            // Assert
+            expect(expected)
+                .toBeFile();
+            const contents = await sandbox.readTextFile(relPath);
+            expect(contents.trim())
+                .toEqual("export * from \"./dist\";");
+        });
+
+        it(`should generate the main.ts`, async () => {
+            // Arrange
+            const
+                name = faker.random.alphaNumeric(5),
+                description = faker.random.words(10),
+                sandbox = await Sandbox.create(),
+                relPath = path.join(name, "src", "main.ts"),
+                where = sandbox.path,
+                expected = sandbox.fullPathFor(relPath);
+            // Act
+            await runTsBoot({
+                name,
+                description,
+                where
+            });
+            // Assert
+            expect(expected)
+                .toBeFile();
+            const contents = await sandbox.readTextFile(relPath);
+            expect(contents)
+                .toContain("export function");
+        });
+
+        it(`should generate the starting index.ts`, async () => {
+            // Arrange
+            const
+                name = faker.random.alphaNumeric(5),
+                description = faker.random.words(10),
+                sandbox = await Sandbox.create(),
+                relPath = path.join(name, "src", "index.ts"),
+                where = sandbox.path,
+                expected = sandbox.fullPathFor(relPath);
+            // Act
+            await runTsBoot({
+                name,
+                description,
+                where
+            });
+            // Assert
+            expect(expected)
+                .toBeFile();
+            const contents = await sandbox.readTextFile(relPath);
+            const lines = contents.trim().split("\n").map(line => line.trim());
+            expect(lines[0])
+                .toEqual("// this is a generated file: do not edit");
+            expect(lines[1])
+                .toEqual("export * from \"./main\";");
+        });
     });
 
     describe(`when package is namespaced`, () => {
