@@ -1,6 +1,6 @@
 {
   "name": "newts",
-  "version": "1.24.1",
+  "version": "1.25.0",
   "description": "Generator to kickstart TypeScript modules for easy publishing to NPMJS",
   "main": "dist/newts.js",
   "bin": {
@@ -75,7 +75,6 @@
     "ts-node": "^8.10.2",
     "tslint": "^6.1.2",
     "typescript": "^3.9.3",
-    "yafs": "^1.5.0",
     "zarro": "^1.78.0"
   },
   "dependencies": {
@@ -85,6 +84,7 @@
     "inquirer-autocomplete-prompt": "^1.0.2",
     "validate-npm-package-name": "^3.0.0",
     "which": "^2.0.2",
+    "yafs": "^1.6.0",
     "yargs": "^15.3.1"
   }
 }
