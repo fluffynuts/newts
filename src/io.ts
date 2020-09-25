@@ -1,6 +1,5 @@
 import path from "path";
-import { promises as fs } from "fs";
-import { mkdir, fileExists, readTextFile } from "yafs";
+import { fileExists, readTextFile, writeTextFile } from "yafs";
 import { Dictionary } from "./types";
 
 export async function readLines(at: string): Promise<string[]> {
@@ -11,12 +10,6 @@ export async function readLines(at: string): Promise<string[]> {
 export async function writeLines(at: string, lines: string[]): Promise<void> {
     const contents = lines.join("\n");
     await writeTextFile(at, contents);
-}
-
-export async function writeTextFile(at: string, contents: string): Promise<void> {
-    const container = path.dirname(at);
-    await mkdir(container);
-    return fs.writeFile(at, contents, { encoding: "utf8" });
 }
 
 export async function readPackageJson(at?: string): Promise<NpmPackage> {

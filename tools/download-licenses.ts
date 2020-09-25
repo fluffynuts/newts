@@ -1,7 +1,7 @@
 import { JSDOM } from "jsdom";
 import { sync as rimraf } from "rimraf";
 import { ConsoleFeedback } from "../src/ux/console-feedback";
-import { writeTextFile } from "../src/io";
+import { writeTextFile } from "yafs";
 const baseUrl = "https://opensource.org/licenses";
 
 const ignoreLicenses = [

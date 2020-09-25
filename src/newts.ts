@@ -9,10 +9,9 @@ import {
     readLines,
     readPackageJson,
     writeLines,
-    writePackageJson,
-    writeTextFile
+    writePackageJson
 } from "./io";
-import { readTextFile } from "yafs";
+import { readTextFile, writeTextFile } from "yafs";
 import { NewtsOptions, Dictionary, Feedback, Func } from "./types";
 import { listLicenses } from "./ux/licenses";
 import { init } from "./git";
@@ -198,7 +197,6 @@ async function installLicense(options: InternalBootstrapOptions) {
 
 async function seedProjectFiles(options: InternalBootstrapOptions) {
     await generateSrcMainFile(options);
-    await generateSrcIndexFile(options);
     await generateModuleIndexFile(options);
     await generateModuleIndexTypingsFile(options);
     await generateCliEntryPoint(options);
@@ -273,14 +271,6 @@ export function example() {
 }
 `);
     await addBinScript(options);
-}
-
-async function generateSrcIndexFile(options: InternalBootstrapOptions) {
-    await writeTextFile(
-        path.join(options.fullPath, "src", "index.ts"),
-        `// this is a generated file: do not edit
-export * from "./main";
-`);
 }
 
 async function generateModuleIndexFile(options: InternalBootstrapOptions) {
@@ -525,6 +515,7 @@ async function initPackage(opts: InternalBootstrapOptions): Promise<boolean> {
 }
 
 const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
+    "yafs": () => true,
     typescript: () => true,
     tslint: o => !!o.includeLinter,
     "@types/node": o => !!o.includeNodeTypes,
@@ -710,6 +701,10 @@ async function generateJestConfig(options: InternalBootstrapOptions) {
 }
 
 async function addBuildNpmScript() {
+    await copyBundledFile("generate-index.js");
+    await addScript("clean-dist", "rimraf dist");
+    await addScript("generate-index", "node generate-index.js");
+    await addScript("prebuild", "run-p clean-dist generate-index");
     await addScript("build", "tsc");
 }
 

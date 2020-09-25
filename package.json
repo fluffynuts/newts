@@ -10,7 +10,8 @@
     "dist/**/*",
     "_gitignore",
     "jest.config.js",
-    "licenses/*"
+    "licenses/*",
+    "generate-index.js"
   ],
   "scripts": {
     "pretest": "run-p lint test-build clear-jest-cache",

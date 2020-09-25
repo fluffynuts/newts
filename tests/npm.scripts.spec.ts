@@ -16,6 +16,45 @@ describe(`npm scripts`, () => {
             .toEqual("tsc");
     });
 
+    it(`should add the prebuild script to generate the src/index.ts`, async () => {
+        // Arrange
+        const result = await bootDefaultPackageJson();
+        // Act
+        expect(result)
+            .toExist();
+        expect(result.scripts)
+            .toExist();
+        expect(result.scripts.prebuild)
+            .toEqual("run-p clean-dist generate-index");
+        // Assert
+    });
+
+    it(`should add the clean-dist script`, async () => {
+        // Arrange
+        const result = await bootDefaultPackageJson();
+        // Act
+        expect(result)
+            .toExist();
+        expect(result.scripts)
+            .toExist();
+        expect(result.scripts["clean-dist"])
+            .toEqual("rimraf dist");
+        // Assert
+    });
+
+    it(`should add the generate-index script`, async () => {
+        // Arrange
+        const result = await bootDefaultPackageJson();
+        // Act
+        expect(result)
+            .toExist();
+        expect(result.scripts)
+            .toExist();
+        expect(result.scripts["generate-index"])
+            .toEqual("node generate-index.js");
+        // Assert
+    });
+
     it(`should add test script`, async () => {
         // Arrange
         const result = await bootDefaultPackageJson();

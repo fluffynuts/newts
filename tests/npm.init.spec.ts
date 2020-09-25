@@ -108,32 +108,6 @@ describe(`initialize npm`, () => {
             expect(contents)
                 .toContain("export function");
         });
-
-        it(`should generate the starting index.ts`, async () => {
-            // Arrange
-            const
-                name = faker.random.alphaNumeric(5),
-                description = faker.random.words(10),
-                sandbox = await Sandbox.create(),
-                relPath = path.join(name, "src", "index.ts"),
-                where = sandbox.path,
-                expected = sandbox.fullPathFor(relPath);
-            // Act
-            await runTsBoot({
-                name,
-                description,
-                where
-            });
-            // Assert
-            expect(expected)
-                .toBeFile();
-            const contents = await sandbox.readTextFile(relPath);
-            const lines = contents.trim().split("\n").map(line => line.trim());
-            expect(lines[0])
-                .toEqual("// this is a generated file: do not edit");
-            expect(lines[1])
-                .toEqual("export * from \"./main\";");
-        });
     });
 
     describe(`when package is namespaced`, () => {
