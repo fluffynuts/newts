@@ -50,7 +50,7 @@ async function filterHashBanged(paths) {
             .filter(f => f.match(/\.ts$/)),
         nonExecutables = await filterHashBanged(tsFiles),
         target = path.resolve(path.join("src", "index.ts")),
-        output = tsFiles.sort()
+        output = nonExecutables.sort()
             .map(f => `export * from "./${ f.replace(/\.ts$/, "") }";`)
             .join("\n");
     await writeFile(

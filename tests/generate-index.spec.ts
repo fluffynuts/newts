@@ -65,6 +65,6 @@ describe(`generate-index`, () => {
         expect(lines)
             .toContain(`export * from "./main";`);
         expect(lines)
-            .not.toContain(`export * from "./main-cli.ts";`);
+            .not.toContain(`export * from "./main-cli";`);
     });
 });
