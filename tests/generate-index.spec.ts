@@ -17,7 +17,7 @@ describe(`generate-index`, () => {
         await sandbox.writeFile("src/another.ts", "export function another() { };");
 
         // Act
-        await sandbox.run(async () =>
+        const result = await sandbox.run(async () =>
             spawn(
                 "node",
                 [script]
@@ -40,5 +40,31 @@ describe(`generate-index`, () => {
             .toEqual(`export * from "./second";`);
         expect(lines[4])
             .toEqual(`export * from "./third";`);
+    });
+
+    it(`should not include a file with a hash-bang in the list as it probably executes`, async () => {
+        // Arrange
+        const
+            sandbox = await Sandbox.create(),
+            script = path.resolve("generate-index.js"),
+            expected = "src/index.ts";
+        await sandbox.mkdir("src");
+        await sandbox.writeFile("src/main.ts", "export function main() { };");
+        await sandbox.writeFile("src/main-cli.ts", "#!/usr/bin/env node\nconsole.log('foo!');");
+        // Act
+        await sandbox.run(async () =>
+            spawn(
+                "node",
+                [script]
+            )
+        );
+        // Assert
+        const
+            contents = await sandbox.readTextFile(expected),
+            lines = contents.split("\n").map(l => l.trim());
+        expect(lines)
+            .toContain(`export * from "./main";`);
+        expect(lines)
+            .not.toContain(`export * from "./main-cli.ts";`);
     });
 });
