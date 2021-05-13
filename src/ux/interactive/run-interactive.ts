@@ -176,7 +176,7 @@ export async function runInteractive(
                     notSet(name)(values);
             },
             message: q(name),
-            default: defaultOptions[name],
+            default: () => defaultOptions[name],
             validate: async (value: T) => {
                 return await runValidators(
                     value,
