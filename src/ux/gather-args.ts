@@ -99,7 +99,7 @@ export function gatherArgs(
         .option("output", {
             alias: "o",
             type: "string",
-            description: "where to create this module folder (defaults to the current folder) **"
+            description: "where to create this module folder (defaults to the current folder if empty, otherwise folder off of this one) **"
         })
         .option("release-scripts", {
             description: "set up 'release' and 'release-beta' scripts (only applies if zarro is installed) *",

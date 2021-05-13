@@ -9,6 +9,8 @@ import { isNotInGitRepo } from "./validators/is-not-in-git-repo";
 import { Func } from "../../types";
 import { noneOrValidEmail } from "./validators/none-or-valid-email";
 import { listLicenses } from "../licenses";
+import path from "path";
+import { ls } from "yafs";
 
 inquirer.registerPrompt(
     "autocomplete",
@@ -16,6 +18,15 @@ inquirer.registerPrompt(
 );
 
 type AsyncFunc<TIn, TOut> = (input: TIn) => Promise<TOut>;
+
+async function folderIsNotEmpty(where: string) {
+    try {
+        const contents = await ls(where);
+        return !!contents.length;
+    } catch (e) {
+        return false;
+    }
+}
 
 export async function runInteractive(
     currentOptions: CliOptions,
@@ -25,11 +36,17 @@ export async function runInteractive(
     const licenses = await listLicenses();
     licenses.push("none");
     const inquirerResult = await inquirer.prompt([
-        prompt("name", undefined, required, isValidPackageName, value => {
+        prompt("name", undefined, required, isValidPackageName, async (value) => {
             if (!currentOptions["verify-name-available"]) {
                 return true;
             }
-            return nameIsAvailableAtNpmJs(value);
+            const isAvailable = await nameIsAvailableAtNpmJs(value);
+            if (isAvailable &&
+                currentOptions.output === process.cwd() &&
+                await folderIsNotEmpty(currentOptions.output)) {
+                currentOptions.output = path.join(currentOptions.output, value);
+            }
+            return isAvailable;
         }),
         prompt("description", undefined),
         prompt("output", undefined, isNotInGitRepo),
@@ -45,13 +62,13 @@ export async function runInteractive(
             message: q("license"),
             source: async (_: any, input: string) =>
                 input === undefined
-                    ? [defaultOptions.license]
+                    ? [ defaultOptions.license ]
                     : licenses.filter(l => l.match(new RegExp(input, "i")))
         },
         yesNo("cli"),
         yesNoWhen("install-yargs", a => !!a.cli),
         yesNo("install-jest"),
-        listWhen("test-environment", ["node", "jsdom"], a => !!a["install-jest"]),
+        listWhen("test-environment", [ "node", "jsdom" ], a => !!a["install-jest"]),
         yesNoWhen("test-script", a => !!a["install-jest"]),
         yesNoWhen("install-faker", a => !!a["install-jest"]),
         yesNoWhen("install-matchers", a => !!a["install-jest"]),
@@ -202,7 +219,7 @@ async function verifyConfig(config: CliOptions): Promise<"ok" | "modify" | "quit
         }
     });
     lines.forEach(line => console.log(line));
-    const ans = await inquirer.prompt([{
+    const ans = await inquirer.prompt([ {
         name: "value",
         message: "Proceed with the above configuration?",
         type: "list",
@@ -211,7 +228,7 @@ async function verifyConfig(config: CliOptions): Promise<"ok" | "modify" | "quit
             "modify",
             "quit"
         ]
-    }]);
+    } ]);
     return ans.value;
 }
 
