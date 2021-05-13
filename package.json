@@ -1,6 +1,6 @@
 {
   "name": "newts",
-  "version": "1.29.3",
+  "version": "1.29.4",
   "description": "Generator to kickstart TypeScript modules for easy publishing to NPMJS",
   "main": "dist/newts.js",
   "bin": {
@@ -24,8 +24,10 @@
     "prebuild": "rimraf dist",
     "build": "tsc",
     "postbuild": "cp .gitignore _gitignore",
-    "prerelease-beta": "run-s build verify-up-to-date test",
-    "release-beta": "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"",
+    "prerelease-beta": "run-s verify-up-to-date test",
+    "release-beta": "run-s quick-release-beta",
+    "prequick-release-beta": "run-s build",
+    "quick-release-beta": "cross-env BETA=1 VERSION_INCREMENT_STRATEGY=patch run-s \"zarro release-npm\"",
     "prerelease": "run-s build verify-up-to-date test",
     "release": "cross-env VERSION_INCREMENT_STRATEGY=minor run-s \"zarro release-npm\"",
     "zarro": "zarro",
