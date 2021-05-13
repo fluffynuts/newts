@@ -41,12 +41,6 @@ export async function runInteractive(
                 return true;
             }
             const isAvailable = await nameIsAvailableAtNpmJs(value);
-            console.log({
-                isAvailable,
-                output: defaultOptions.output,
-                cwd: process.cwd(),
-                outputIsNotEmpty: await folderIsNotEmpty(currentOptions.output || "")
-            });
             if (isAvailable &&
                 defaultOptions.output === process.cwd() &&
                 await folderIsNotEmpty(defaultOptions.output)) {
