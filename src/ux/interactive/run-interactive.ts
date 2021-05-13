@@ -43,14 +43,14 @@ export async function runInteractive(
             const isAvailable = await nameIsAvailableAtNpmJs(value);
             console.log({
                 isAvailable,
-                output: currentOptions.output,
+                output: defaultOptions.output,
                 cwd: process.cwd(),
                 outputIsNotEmpty: await folderIsNotEmpty(currentOptions.output || "")
             });
             if (isAvailable &&
-                currentOptions.output === process.cwd() &&
-                await folderIsNotEmpty(currentOptions.output)) {
-                currentOptions.output = path.join(currentOptions.output, value);
+                defaultOptions.output === process.cwd() &&
+                await folderIsNotEmpty(defaultOptions.output)) {
+                defaultOptions.output = path.join(defaultOptions.output, value);
             }
             return isAvailable;
         }),
