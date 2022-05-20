@@ -95,13 +95,13 @@ export async function newts(rawOptions: NewtsOptions) {
         );
 
         await run(
-            `generate configurations`,
-            () => generateConfigurations(opts)
+            `seed project files`,
+            () => seedProjectFiles(opts)
         );
 
         await run(
-            `seed project files`,
-            () => seedProjectFiles(opts)
+            `generate configurations`,
+            () => generateConfigurations(opts)
         );
 
         await run(
