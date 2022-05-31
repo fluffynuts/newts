@@ -224,7 +224,7 @@ async function generateTestIndexSpecFile(options: InternalBootstrapOptions) {
         headers.push(`import "expect-even-more-jest";`);
     }
     if (options.includeFaker) {
-        headers.push(`import * as faker from "faker";`);
+        headers.push(`import { faker } from "@faker-js/faker";`);
     }
     await writeTextFile(
         path.join(options.fullPath, "tests", "index.spec.ts"),
@@ -519,8 +519,7 @@ const devPackageMap: Dictionary<Func<InternalBootstrapOptions, boolean>> = {
     typescript: () => true,
     tslint: o => !!o.includeLinter,
     "@types/node": o => !!o.includeNodeTypes,
-    faker: o => !!o.includeFaker,
-    "@types/faker": o => !!o.includeFaker,
+    "@faker-js/faker": o => !!o.includeFaker,
     jest: o => !!o.includeJest,
     "@types/jest": o => !!o.includeJest,
     "ts-jest": o => !!o.includeJest,

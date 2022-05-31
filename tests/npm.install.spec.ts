@@ -79,7 +79,7 @@ describe(`install required packages`, () => {
     });
     // faker
     describe(`faker`, () => {
-        it(`should install faker and @types/faker by default`, async () => {
+        it(`should install @faker-js/faker by default`, async () => {
             // Arrange
             const { name, where } = await init();
             // Act
@@ -88,9 +88,7 @@ describe(`install required packages`, () => {
             })
             // Assert
             expect(shared.spawnModule)
-                .toHaveInstalledDevDependency("faker");
-            expect(shared.spawnModule)
-                .toHaveInstalledDevDependency("@types/faker");
+                .toHaveInstalledDevDependency("@faker-js/faker");
         });
         it(`should skip faker on request`, async () => {
             // Arrange
