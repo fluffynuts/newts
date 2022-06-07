@@ -283,7 +283,7 @@ const optionLabels: OptionLabels = {
     "init-git": "initialize git",
     "init-readme": "initialize README.md",
     "install-jest": "test with jest",
-    "install-faker": "install faker.js",
+    "install-faker": "install @faker-js/faker",
     "install-matchers": "install extra jest matchers",
     "install-linter": "install linter",
     "install-zarro": "install zarro build scaffolding",

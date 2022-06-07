@@ -17,10 +17,10 @@ export function spawn(
                 code: -1
             };
         child.stderr?.on("data", d => {
-            result.stdout.push(d.toString());
+            result.stderr.push(d.toString());
         })
         child.stdout?.on("data", d => {
-            result.stderr.push(d.toString());
+            result.stdout.push(d.toString());
         });
         child.on("close", code => {
             result.code = code;

@@ -47,7 +47,7 @@ export function gatherArgs(
             boolean: true
         })
         .option("install-faker", {
-            description: "install fakerjs for awesome testing *",
+            description: "install @faker-js/faker for awesome testing *",
             boolean: true
         })
         .option("install-jest", {

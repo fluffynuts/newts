@@ -46,8 +46,8 @@ interface InternalBootstrapOptions extends NewtsOptions {
 }
 
 const licenseReplacements = {
-    "author": [/<copyright holder>/i, /<copyright holders>/i],
-    "year": [/<year>/i, /\[year]/i]
+    "author": [ /<copyright holder>/i, /<copyright holders>/i ],
+    "year": [ /<year>/i, /\[year]/i ]
 }
 
 export async function newts(rawOptions: NewtsOptions) {
@@ -247,13 +247,32 @@ async function generateCliEntryPoint(options: InternalBootstrapOptions) {
         return;
     }
     const yargsImport = options.includeYargs
-        ? `import yargs = require("yargs");`
+        ? `import yargs = require("yargs");\n`
         : ""
+    const gatherOptions = options.includeYargs
+        ? `
+export interface CliOptions {
+    someFlag: boolean;
+    someOptionalString?: string;
+}
+function gatherOptions(): CliOptions | Promise<CliOptions> {
+    return yargs
+            .usage(\`usage: $0 [options]\nnegate any boolean option by prepending --no-\`)
+            .option("someFlag", {
+                type: "boolean",
+                default: false
+            }).option("someOptionalString", {
+                type: "string",
+                demandOption: false
+            }).argv;
+}`.trim()
+        : ``;
     await writeTextFile(
         path.join(options.fullPath, "src", `${ options.name }-cli.ts`),
         `#!/usr/bin/env node
 import { example } from "./index";
 ${ yargsImport }
+${ gatherOptions }
 
 (async function main() {
     const args = yargs.argv;
@@ -264,7 +283,7 @@ ${ yargsImport }
 
 async function generateSrcMainFile(options: InternalBootstrapOptions) {
     await writeTextFile(
-        path.join(options.fullPath, "src", `${options.name}.ts`),
+        path.join(options.fullPath, "src", `${ options.name }.ts`),
         `// ${ options.name } module main file
 export function example() {
   console.log("hello, world");
@@ -460,7 +479,7 @@ const defaultTsLintOptions = {
     ],
     "jsRules": {},
     "rules": {
-        "quotemark": [true, "double"],
+        "quotemark": [ true, "double" ],
         "one-variable-per-declaration": false,
         "ordered-imports": false,
         "no-console": false
@@ -559,7 +578,7 @@ async function installPackages(
         s = packages.length === 1 ? "" : "s",
         label = isDev ? "dev" : "release",
         save = isDev ? "--save-dev" : "--save",
-        args = ["install", save, "--no-progress"],
+        args = [ "install", save, "--no-progress" ],
         timeWarning = packages.length > 3
             ? "(may take a minute)"
             : "",
@@ -569,7 +588,7 @@ async function installPackages(
         for (const pkg of packages) {
             await options.feedback.run(
                 `  ${ pkg }`,
-                () => runNpm(...args.concat([pkg]))
+                () => runNpm(...args.concat([ pkg ]))
             );
         }
     } else {
@@ -765,7 +784,7 @@ async function addNpmScripts(sanitizedOptions: InternalBootstrapOptions) {
 }
 
 function validateNodeVersionAtLeast(requireMajor: number, requireMinor: number) {
-    const [major, minor] = process.version.replace(/^v/, "")
+    const [ major, minor ] = process.version.replace(/^v/, "")
         .split(".")
         .map(s => parseInt(s, 10))
         .map(i => isNaN(i) ? 0 : i);
