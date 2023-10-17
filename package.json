@@ -82,8 +82,8 @@
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "bent": "^7.3.7",
-    "inquirer": "^7.3.0",
-    "inquirer-autocomplete-prompt": "^1.0.2",
+    "inquirer": "^9.2.11",
+    "inquirer-autocomplete-prompt": "^3.0.1",
     "validate-npm-package-name": "^3.0.0",
     "which": "^2.0.2",
     "yafs": "^1.13.0",
