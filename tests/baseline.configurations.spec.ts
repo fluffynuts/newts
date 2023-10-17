@@ -196,13 +196,11 @@ describe(`newts: baseline configurations`, () => {
   describe(`tsconfig.json`, () => {
     let tsconfig: any;
     beforeAll(async () => {
-      jest.setTimeout(60000);
       mockSpawn();
       // override install to get actual tsc so we can use the result from tsc --init
       shared.npmInstallModifier = () => [ "install", "--save-dev", "--no-progress", "typescript" ];
       shared.allowNpmRun = true;
       tsconfig = await bootDefaultTsConfig();
-      jest.setTimeout(5000);
     });
     afterAll(() => {
       shared.npmInstallModifier = undefined;

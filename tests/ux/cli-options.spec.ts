@@ -1,7 +1,8 @@
 import * as faker from "faker";
 
 const fakeQueryGitConfig = {
-    queryGitConfig: () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    queryGitConfig: (key: string) => {
         return ""
     }
 };

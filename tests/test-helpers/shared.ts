@@ -9,6 +9,8 @@ import { newts } from "../../src/newts";
 import { promises } from "fs";
 import { NewtsOptions } from "../../src/types";
 import { SpawnOptions } from "child_process";
+import { ProcessData } from "../../src/spawn";
+import Mock = jest.Mock;
 const { spyOn } = jest;
 
 const { readFile } = promises;
@@ -51,7 +53,10 @@ export function mockSpawn() {
         shared.fakeGit = true;
         shared.npmInstallModifier = undefined;
         shared.allowNpmRun = false;
-        const original = spawnModule.spawn;
+        const original = spawnModule.spawn as Mock;
+        if (!!original.mock) {
+            return;
+        }
         spyOn(spawnModule, "spawn").mockImplementation(
           (cmd: string, args?: string[], opts?: SpawnOptions) => {
             const
@@ -65,13 +70,13 @@ export function mockSpawn() {
                 command === "npm" &&
                 args[0] === "install") {
                 // suppress
-                return Promise.resolve(undefined);
+                return Promise.resolve({} as ProcessData);
             }
             const cmdIsNpm = isNpm(cmd);
             if (cmdIsNpm &&
                 args[0] === "run" &&
                 !shared.allowNpmRun) {
-                return Promise.resolve(undefined);
+                return Promise.resolve({} as ProcessData);
             }
             if (shared.npmInstallModifier &&
                 cmdIsNpm &&
@@ -80,7 +85,7 @@ export function mockSpawn() {
             }
             if (shared.fakeGit && command === "git") {
                 // suppress
-                return Promise.resolve(undefined);
+                return Promise.resolve({} as ProcessData);
             }
             return original.call(null, cmd, args, opts);
         });

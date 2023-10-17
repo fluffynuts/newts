@@ -3,6 +3,7 @@
   "version": "1.33.0",
   "description": "Generator to kickstart TypeScript modules for easy publishing to NPMJS",
   "main": "dist/newts.js",
+  "type": "commonjs",
   "bin": {
     "newts": "./dist/newts-cli.js"
   },
@@ -17,6 +18,7 @@
     "pretest": "run-p lint test-build clear-jest-cache",
     "clear-jest-cache": "rimraf .jest-cache",
     "test": "jest",
+    "test-with-detect-open-handles": "jest --detectOpenHandles",
     "lint": "eslint .",
     "autolint": "nodemon -e ts -x \"run-s lint\"",
     "autobuild": "nodemon -w src -w tests -e ts -x \"run-s --silent build\"",
@@ -86,8 +88,8 @@
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "bent": "^7.3.7",
-    "inquirer": "^9.2.11",
-    "inquirer-autocomplete-prompt": "^3.0.1",
+    "inquirer": "^8.2.6",
+    "inquirer-autocomplete-prompt": "^2.0.1",
     "validate-npm-package-name": "^3.0.0",
     "which": "^2.0.2",
     "yafs": "^1.13.0",
