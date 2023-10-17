@@ -11,7 +11,8 @@ export async function runValidators<T>(
             if (thisResult !== true) {
                 return thisResult;
             }
-        } catch (e) {
+        } catch (err) {
+            const e = err as Error;
             return e.message;
         }
     }

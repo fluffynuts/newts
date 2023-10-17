@@ -1,7 +1,6 @@
 import { init, runTsBoot, shared } from "./test-helpers/shared";
 import "expect-even-more-jest";
 import "./test-helpers/matchers";
-import { newts } from "../src/newts";
 import * as faker from "faker";
 import { Sandbox } from "filesystem-sandbox";
 import * as path from "path";

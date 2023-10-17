@@ -37,7 +37,8 @@ async function printLicenseIfRequired(argv: CliOptions, feedback: Feedback) {
         feedback.log(licenseText);
         feedback.log(`\nfor more information, see: https://opensource.org/licenses/${ id }`);
         process.exit(0);
-    } catch (e) {
+    } catch (err) {
+        const e = err as Error;
         if ((e.message || "").startsWith("unknown license:")) {
             feedback.error(e.message);
             process.exit(1);
@@ -155,7 +156,8 @@ export function shouldRunInteractive(argv: CliOptions) {
         }
         await newts(opts);
         process.exit(0);
-    } catch (e) {
+    } catch (err) {
+        const e = err as Error;
         if (typeof e.message === "string") {
             console.error(chalk.red(e.message));
             console.error(e.stack);

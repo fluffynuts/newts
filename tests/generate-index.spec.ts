@@ -17,7 +17,7 @@ describe(`generate-index`, () => {
         await sandbox.writeFile("src/another.ts", "export function another() { };");
 
         // Act
-        const result = await sandbox.run(async () =>
+        await sandbox.run(async () =>
             spawn(
                 "node",
                 [script]

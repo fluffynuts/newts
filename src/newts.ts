@@ -423,7 +423,7 @@ async function copyBundledFile(withName: string, fromName?: string) {
 }
 
 async function cp(from: string, to: string) {
-    return new Promise((_resolve, _reject) => {
+    return new Promise<void>((_resolve, _reject) => {
         let completed = false;
         const
             outStream = createWriteStream(to, { flags: "w" }),

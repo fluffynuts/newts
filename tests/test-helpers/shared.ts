@@ -8,6 +8,8 @@ import path from "path";
 import { newts } from "../../src/newts";
 import { promises } from "fs";
 import { NewtsOptions } from "../../src/types";
+import { SpawnOptions } from "child_process";
+const { spyOn } = jest;
 
 const { readFile } = promises;
 
@@ -50,22 +52,26 @@ export function mockSpawn() {
         shared.npmInstallModifier = undefined;
         shared.allowNpmRun = false;
         const original = spawnModule.spawn;
-        spyOn(spawnModule, "spawn").and.callFake((cmd, args, opts) => {
+        spyOn(spawnModule, "spawn").mockImplementation(
+          (cmd: string, args?: string[], opts?: SpawnOptions) => {
             const
                 basename = path.basename(cmd),
                 extname = path.extname(basename),
                 command = basename.substr(0, basename.length - extname.length).toLowerCase();
+            if (!args) {
+                args = [];
+            }
             if (!shared.npmInstallModifier &&
                 command === "npm" &&
                 args[0] === "install") {
                 // suppress
-                return;
+                return Promise.resolve(undefined);
             }
             const cmdIsNpm = isNpm(cmd);
             if (cmdIsNpm &&
                 args[0] === "run" &&
                 !shared.allowNpmRun) {
-                return;
+                return Promise.resolve(undefined);
             }
             if (shared.npmInstallModifier &&
                 cmdIsNpm &&
@@ -74,11 +80,12 @@ export function mockSpawn() {
             }
             if (shared.fakeGit && command === "git") {
                 // suppress
-                return;
+                return Promise.resolve(undefined);
             }
             return original.call(null, cmd, args, opts);
         });
-    } catch (e) {
+    } catch (err) {
+        const e = err as Error;
         if (e.message && e.message.match(/spawn has already been spied upon/)) {
             return;
         }

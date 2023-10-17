@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { AsyncFunc, Feedback } from "../types";
 
 export class NullFeedback implements Feedback {

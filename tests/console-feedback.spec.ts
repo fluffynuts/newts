@@ -1,5 +1,6 @@
 import "expect-even-more-jest";
 import { ConsoleFeedback } from "../src/ux/console-feedback";
+const { spyOn } = jest;
 
 describe("console-feedback", () => {
     describe("rewrite", () => {

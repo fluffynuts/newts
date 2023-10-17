@@ -4,6 +4,7 @@ import * as faker from "faker";
 import { required } from "../../src/ux/interactive/validators/required";
 import { nameIsAvailableAtNpmJs } from "../../src/ux/interactive/validators/name-is-available-at-npm-js";
 import { isValidPackageName } from "../../src/ux/interactive/validators/is-valid-package-name";
+const { spyOn } = jest;
 
 describe(`interactive validators`, () => {
     describe(`runValidators`, () => {

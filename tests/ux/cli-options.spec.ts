@@ -1,11 +1,12 @@
 import * as faker from "faker";
 
 const fakeQueryGitConfig = {
-    queryGitConfig: function () {
+    queryGitConfig: () => {
         return ""
     }
 };
 jest.doMock("../../src/ux/query-git-config", () => fakeQueryGitConfig);
+const { spyOn } = jest;
 
 import { applyDefaults, CliOptions, generateDefaults } from "../../src/ux/cli-options";
 import { Dictionary } from "../../src/types";
@@ -22,7 +23,7 @@ describe(`cli-options`, () => {
                     "user.email": environmentAuthorEmail
                 } as Dictionary<string>;
             spyOn(fakeQueryGitConfig, "queryGitConfig")
-                .and.callFake(key => gitConfig[key]);
+              .mockImplementation((key: string) => gitConfig[key]);
             const
                 defaults = await generateDefaults(),
                 opts = {

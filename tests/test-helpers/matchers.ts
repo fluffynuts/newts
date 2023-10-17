@@ -26,7 +26,9 @@ expect.extend({
 });
 
 declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     export namespace jest {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         export interface Matchers<R> {
             toHaveInstalledDevDependency: (moduleName: string) => CustomMatcherResult;
         }

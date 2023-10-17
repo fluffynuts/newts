@@ -28,7 +28,7 @@ export async function runInFolder<T>(
 }
 
 export function which(program: string): Promise<string | undefined> {
-    return new Promise<string>(resolve => {
+    return new Promise<string | undefined>(resolve => {
         _which(program, (err, data) => resolve(err ? undefined : data));
     })
 }

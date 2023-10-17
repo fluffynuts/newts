@@ -1,3 +1,5 @@
+// noinspection ExceptionCaughtLocallyJS
+
 import bent from "bent";
 import { Dictionary } from "../../../types";
 
@@ -9,7 +11,8 @@ export async function nameIsAvailableAtNpmJs(
     try {
         await checkIfNameExists(name);
         return true;
-    } catch (e) {
+    } catch (err) {
+        const e = err as Error;
         if ((e.message || "").indexOf("already registered") > -1) {
             return e.message;
         }
